@@ -15,6 +15,7 @@ import { parseSchedule } from '../lib/time.js';
 import { scrimmageEmbed, scrimmageLine, scrimmageListEmbed } from '../lib/format.js';
 import { requireGuildId } from '../lib/interaction.js';
 import { respondScrimmageIds, respondTeamNames } from '../lib/autocomplete.js';
+import { dmUsers } from '../lib/notify.js';
 
 export const scrimCommand: Command = {
   data: new SlashCommandBuilder()
@@ -181,11 +182,13 @@ async function propose(
     scheduledAt,
     proposedBy: interaction.user.id,
   });
+  const embed = scrimmageEmbed(scrim, home, away);
   await interaction.reply({
     content: '📋 Scrimmage proposed!',
-    embeds: [scrimmageEmbed(scrim, home, away)],
+    embeds: [embed],
     components: [scrimActionRow(scrim.id)],
   });
+  await notifyCaptains(context, home, away, '📣 A new scrimmage was proposed:', embed);
 }
 
 async function confirm(
@@ -230,10 +233,9 @@ async function result(
     },
   );
   const [home, away] = await resolveTeams(context, guildId, scrim.homeTeamId, scrim.awayTeamId);
-  await interaction.reply({
-    content: '🏁 Result recorded!',
-    embeds: [scrimmageEmbed(scrim, home, away)],
-  });
+  const embed = scrimmageEmbed(scrim, home, away);
+  await interaction.reply({ content: '🏁 Result recorded!', embeds: [embed] });
+  await notifyCaptains(context, home, away, '📣 A scrimmage result was recorded:', embed);
 }
 
 async function list(
@@ -268,10 +270,24 @@ async function applyScrimAction(
       ? await context.scrimmages.confirm(guildId, scrimId)
       : await context.scrimmages.cancel(guildId, scrimId);
   const [home, away] = await resolveTeams(context, guildId, scrim.homeTeamId, scrim.awayTeamId);
-  return {
-    content: action === 'confirm' ? '🟢 Scrimmage confirmed!' : '🔴 Scrimmage cancelled.',
-    embeds: [scrimmageEmbed(scrim, home, away)],
-  };
+  const content = action === 'confirm' ? '🟢 Scrimmage confirmed!' : '🔴 Scrimmage cancelled.';
+  const embed = scrimmageEmbed(scrim, home, away);
+  await notifyCaptains(context, home, away, `📣 ${content}`, embed);
+  return { content, embeds: [embed] };
+}
+
+/** DM the captains of both teams about a scrimmage update (best-effort). */
+async function notifyCaptains(
+  context: AppContext,
+  home: Team | null,
+  away: Team | null,
+  content: string,
+  embed: EmbedBuilder,
+): Promise<void> {
+  const captains = [home?.captainId, away?.captainId].filter(
+    (id): id is string => id !== undefined,
+  );
+  await dmUsers(context.client, captains, { content, embeds: [embed] }, context.logger);
 }
 
 const BUTTON_NAMESPACE = 'scrim';

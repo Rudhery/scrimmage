@@ -11,8 +11,8 @@ import { handleInteraction } from './events/interaction-create.js';
 async function main(): Promise<void> {
   const config = loadConfig();
   const logger = createLogger(config.logLevel);
-  const context = createContext(config, logger);
   const client = createClient();
+  const context = createContext(config, logger, client);
 
   client.once(Events.ClientReady, async (ready) => {
     logger.info(`Logged in as ${ready.user.tag}`);

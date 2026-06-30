@@ -14,6 +14,7 @@ import type { Command } from '../lib/command.js';
 import { ROLE_LABEL, teamEmbed, teamListEmbed } from '../lib/format.js';
 import { canManageTeam, requireGuildId } from '../lib/interaction.js';
 import { respondTeamNames } from '../lib/autocomplete.js';
+import { dmUser } from '../lib/notify.js';
 
 const PERMISSION_DENIED = '❌ Only the team captain or a server manager can do that.';
 
@@ -318,6 +319,12 @@ async function transferCaptain(
     content: `👑 <@${user.id}> is now the captain of **${updated.name}**.`,
     embeds: [teamEmbed(updated, roster)],
   });
+  await dmUser(
+    context.client,
+    user.id,
+    `👑 You are now the captain of **${updated.name}**.`,
+    context.logger,
+  );
 }
 
 async function setRole(
@@ -337,6 +344,12 @@ async function setRole(
   }
   await context.teams.setMemberRole(guildId, team.id, user.id, role);
   await interaction.reply(`🏷️ <@${user.id}> is now **${ROLE_LABEL[role]}** on **${team.name}**.`);
+  await dmUser(
+    context.client,
+    user.id,
+    `🏷️ You are now **${ROLE_LABEL[role]}** on **${team.name}**.`,
+    context.logger,
+  );
 }
 
 async function addMember(
@@ -355,6 +368,7 @@ async function addMember(
   }
   await context.teams.addMember(guildId, team.id, user.id);
   await interaction.reply(`✅ Added <@${user.id}> to **${team.name}**.`);
+  await dmUser(context.client, user.id, `✅ You were added to **${team.name}**.`, context.logger);
 }
 
 async function removeMember(
