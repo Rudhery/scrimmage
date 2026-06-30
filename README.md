@@ -87,11 +87,19 @@ npm run dev
 The database is created and migrated automatically on first run. When `DISCORD_GUILD_ID` is set,
 the bot also registers its slash commands to that guild on startup, so they appear instantly.
 
-Invite the bot to your server with the `applications.commands` and `bot` scopes, and you're ready
-to go.
+### 4. Invite the bot
+
+Open this URL (replace `YOUR_CLIENT_ID`) to add the bot to your server. It needs the `bot` and
+`applications.commands` scopes — **no privileged intents required**:
+
+```
+https://discord.com/api/oauth2/authorize?client_id=YOUR_CLIENT_ID&scope=bot%20applications.commands&permissions=84992
+```
 
 > To register commands **globally** (for production), run `npm run register` once. Global commands
 > can take up to ~1 hour to propagate.
+
+For Docker and production deployment, see the [deployment guide](./docs/DEPLOYMENT.md).
 
 ## 💬 Commands
 
