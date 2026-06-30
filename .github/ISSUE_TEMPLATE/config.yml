@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Questions & Discussions
+    url: https://github.com/Rudhery/scrimmage/discussions
+    about: Ask questions, share ideas, and discuss with the community.
+  - name: 🔒 Report a security vulnerability
+    url: https://github.com/Rudhery/scrimmage/security/advisories/new
+    about: Please report security issues privately, not as public issues.

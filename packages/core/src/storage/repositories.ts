@@ -1,0 +1,47 @@
+import type { Team, TeamMember } from '../domain/team.js';
+import type { Scrimmage, ScrimmageStatus } from '../domain/scrimmage.js';
+
+/**
+ * Persistence boundary for teams and their rosters.
+ *
+ * Implementations live in `@scrimmage/storage-*` packages. The core never depends
+ * on a concrete database — only on this interface.
+ */
+export interface TeamRepository {
+  create(team: Team): Promise<Team>;
+  findById(guildId: string, id: string): Promise<Team | null>;
+  /** Case-insensitive lookup by name within a guild. */
+  findByName(guildId: string, name: string): Promise<Team | null>;
+  list(guildId: string): Promise<Team[]>;
+  delete(guildId: string, id: string): Promise<void>;
+
+  addMember(member: TeamMember): Promise<void>;
+  removeMember(teamId: string, userId: string): Promise<void>;
+  findMember(teamId: string, userId: string): Promise<TeamMember | null>;
+  listMembers(teamId: string): Promise<TeamMember[]>;
+}
+
+/** Optional filters when listing scrimmages. */
+export interface ScrimmageFilter {
+  status?: ScrimmageStatus;
+  teamId?: string;
+}
+
+/** Persistence boundary for scrimmages (friendly matches). */
+export interface ScrimmageRepository {
+  create(scrimmage: Scrimmage): Promise<Scrimmage>;
+  findById(guildId: string, id: string): Promise<Scrimmage | null>;
+  list(guildId: string, filter?: ScrimmageFilter): Promise<Scrimmage[]>;
+  update(scrimmage: Scrimmage): Promise<Scrimmage>;
+}
+
+/**
+ * A storage backend bundles the repositories the application needs and owns the
+ * lifecycle of the underlying connection.
+ */
+export interface Storage {
+  readonly teams: TeamRepository;
+  readonly scrimmages: ScrimmageRepository;
+  /** Release any underlying resources (connections, file handles, …). */
+  close(): Promise<void> | void;
+}
