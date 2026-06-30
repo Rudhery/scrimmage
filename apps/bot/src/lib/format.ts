@@ -1,7 +1,20 @@
 import { EmbedBuilder, time, TimestampStyles } from 'discord.js';
-import { ScrimmageStatus, type Scrimmage, type Team, type TeamMember } from '@scrimmage/core';
+import {
+  ScrimmageStatus,
+  TeamRole,
+  type Scrimmage,
+  type Team,
+  type TeamMember,
+} from '@scrimmage/core';
 
 const BRAND_COLOR = 0x5865f2;
+
+/** Human label and emoji for each member role. */
+export const ROLE_LABEL: Record<TeamRole, string> = {
+  [TeamRole.Coach]: '🎓 Coach',
+  [TeamRole.Assistant]: '🧩 Assistant',
+  [TeamRole.Player]: '🎮 Player',
+};
 
 const STATUS_LABEL: Record<ScrimmageStatus, string> = {
   [ScrimmageStatus.Proposed]: '🟡 Proposed',
@@ -15,18 +28,36 @@ function label(team: Team | null): { name: string; tag: string } {
 }
 
 export function teamEmbed(team: Team, roster: TeamMember[]): EmbedBuilder {
-  return new EmbedBuilder()
-    .setTitle(`${team.name} [${team.tag}]`)
+  // The captain is shown on its own line, so keep them out of the role groups.
+  const inRole = (role: TeamRole): TeamMember[] =>
+    roster.filter((member) => member.role === role && member.userId !== team.captainId);
+  const mentions = (members: TeamMember[]): string =>
+    members.length ? members.map((member) => `<@${member.userId}>`).join(', ') : '—';
+
+  const embed = new EmbedBuilder()
+    .setTitle(`${team.name} \`[${team.tag}]\``)
     .setColor(BRAND_COLOR)
     .addFields(
-      { name: 'Captain', value: `<@${team.captainId}>`, inline: true },
-      { name: 'Members', value: String(roster.length), inline: true },
-      {
-        name: 'Roster',
-        value: roster.length ? roster.map((member) => `<@${member.userId}>`).join(', ') : '—',
-      },
+      { name: '👑 Captain', value: `<@${team.captainId}>`, inline: true },
+      { name: '👥 Members', value: String(roster.length), inline: true },
     )
     .setFooter({ text: `Team ID: ${team.id}` });
+
+  if (team.description) {
+    embed.setDescription(team.description);
+  }
+
+  const coaches = inRole(TeamRole.Coach);
+  const assistants = inRole(TeamRole.Assistant);
+  if (coaches.length) {
+    embed.addFields({ name: '🎓 Coaches', value: mentions(coaches) });
+  }
+  if (assistants.length) {
+    embed.addFields({ name: '🧩 Assistants', value: mentions(assistants) });
+  }
+  embed.addFields({ name: '🎮 Players', value: mentions(inRole(TeamRole.Player)) });
+
+  return embed;
 }
 
 export function teamListEmbed(teams: Team[]): EmbedBuilder {

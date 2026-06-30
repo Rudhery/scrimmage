@@ -1,7 +1,17 @@
-import { MessageFlags, SlashCommandBuilder, type ChatInputCommandInteraction } from 'discord.js';
+import {
+  ActionRowBuilder,
+  MessageFlags,
+  ModalBuilder,
+  SlashCommandBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+  type ChatInputCommandInteraction,
+  type ModalSubmitInteraction,
+} from 'discord.js';
+import { TeamRole } from '@scrimmage/core';
 import type { AppContext } from '../context.js';
 import type { Command } from '../lib/command.js';
-import { teamEmbed, teamListEmbed } from '../lib/format.js';
+import { ROLE_LABEL, teamEmbed, teamListEmbed } from '../lib/format.js';
 import { canManageTeam, requireGuildId } from '../lib/interaction.js';
 import { respondTeamNames } from '../lib/autocomplete.js';
 
@@ -14,17 +24,7 @@ export const teamCommand: Command = {
     .addSubcommand((sub) =>
       sub
         .setName('create')
-        .setDescription('Create a new team (you become the captain).')
-        .addStringOption((opt) =>
-          opt.setName('name').setDescription('Team name').setRequired(true).setMaxLength(50),
-        )
-        .addStringOption((opt) =>
-          opt
-            .setName('tag')
-            .setDescription('Short tag, e.g. RDG')
-            .setRequired(true)
-            .setMaxLength(5),
-        ),
+        .setDescription('Create a new team (opens a form — you become the captain).'),
     )
     .addSubcommand((sub) =>
       sub
@@ -63,6 +63,26 @@ export const teamCommand: Command = {
         )
         .addUserOption((opt) =>
           opt.setName('user').setDescription('The new captain').setRequired(true),
+        ),
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName('role')
+        .setDescription('Set a member as coach, assistant or player.')
+        .addStringOption((opt) =>
+          opt.setName('team').setDescription('Team name').setRequired(true).setAutocomplete(true),
+        )
+        .addUserOption((opt) => opt.setName('user').setDescription('The member').setRequired(true))
+        .addStringOption((opt) =>
+          opt
+            .setName('role')
+            .setDescription('Role to assign')
+            .setRequired(true)
+            .addChoices(
+              { name: '🎓 Coach', value: TeamRole.Coach },
+              { name: '🧩 Assistant', value: TeamRole.Assistant },
+              { name: '🎮 Player', value: TeamRole.Player },
+            ),
         ),
     )
     .addSubcommandGroup((group) =>
@@ -118,7 +138,7 @@ export const teamCommand: Command = {
 
     switch (interaction.options.getSubcommand()) {
       case 'create':
-        await createTeam(interaction, context, guildId);
+        await interaction.showModal(buildCreateTeamModal());
         return;
       case 'delete':
         await deleteTeam(interaction, context, guildId);
@@ -135,6 +155,9 @@ export const teamCommand: Command = {
       case 'captain':
         await transferCaptain(interaction, context, guildId);
         return;
+      case 'role':
+        await setRole(interaction, context, guildId);
+        return;
     }
   },
 
@@ -143,17 +166,71 @@ export const teamCommand: Command = {
   },
 };
 
-async function createTeam(
-  interaction: ChatInputCommandInteraction,
+const CREATE_MODAL_ID = 'team:create';
+
+/** The modal shown by `/team create`. */
+function buildCreateTeamModal(): ModalBuilder {
+  return new ModalBuilder()
+    .setCustomId(CREATE_MODAL_ID)
+    .setTitle('Create a team')
+    .addComponents(
+      new ActionRowBuilder<TextInputBuilder>().addComponents(
+        new TextInputBuilder()
+          .setCustomId('name')
+          .setLabel('Team name')
+          .setStyle(TextInputStyle.Short)
+          .setMinLength(2)
+          .setMaxLength(50)
+          .setRequired(true),
+      ),
+      new ActionRowBuilder<TextInputBuilder>().addComponents(
+        new TextInputBuilder()
+          .setCustomId('tag')
+          .setLabel('Tag (2–5 letters/numbers)')
+          .setStyle(TextInputStyle.Short)
+          .setMinLength(2)
+          .setMaxLength(5)
+          .setRequired(true),
+      ),
+      new ActionRowBuilder<TextInputBuilder>().addComponents(
+        new TextInputBuilder()
+          .setCustomId('description')
+          .setLabel('Description (optional)')
+          .setStyle(TextInputStyle.Paragraph)
+          .setMaxLength(300)
+          .setRequired(false),
+      ),
+    );
+}
+
+/** Whether a modal submission belongs to the team commands. */
+export function isTeamModal(customId: string): boolean {
+  return customId === CREATE_MODAL_ID;
+}
+
+/** Handle the `/team create` modal submission. */
+export async function handleTeamModal(
+  interaction: ModalSubmitInteraction,
   context: AppContext,
-  guildId: string,
 ): Promise<void> {
+  const guildId = interaction.guildId;
+  if (!guildId) {
+    await interaction.reply({
+      content: 'This command can only be used in a server.',
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  const description = interaction.fields.getTextInputValue('description').trim();
   const team = await context.teams.createTeam({
     guildId,
-    name: interaction.options.getString('name', true),
-    tag: interaction.options.getString('tag', true),
+    name: interaction.fields.getTextInputValue('name'),
+    tag: interaction.fields.getTextInputValue('tag'),
     captainId: interaction.user.id,
+    description: description.length > 0 ? description : undefined,
   });
+
   const roster = await context.teams.getRoster(team.id);
   await interaction.reply({
     content: `✅ Created **${team.name}**.`,
@@ -241,6 +318,25 @@ async function transferCaptain(
     content: `👑 <@${user.id}> is now the captain of **${updated.name}**.`,
     embeds: [teamEmbed(updated, roster)],
   });
+}
+
+async function setRole(
+  interaction: ChatInputCommandInteraction,
+  context: AppContext,
+  guildId: string,
+): Promise<void> {
+  const user = interaction.options.getUser('user', true);
+  const role = interaction.options.getString('role', true) as TeamRole;
+  const team = await context.teams.getTeamByName(
+    guildId,
+    interaction.options.getString('team', true),
+  );
+  if (!canManageTeam(interaction, team)) {
+    await interaction.reply({ content: PERMISSION_DENIED, flags: MessageFlags.Ephemeral });
+    return;
+  }
+  await context.teams.setMemberRole(guildId, team.id, user.id, role);
+  await interaction.reply(`🏷️ <@${user.id}> is now **${ROLE_LABEL[role]}** on **${team.name}**.`);
 }
 
 async function addMember(

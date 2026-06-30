@@ -12,6 +12,7 @@ function fakeInteraction(kind: 'chat' | 'autocomplete' | 'button', extra: object
   return {
     isAutocomplete: () => kind === 'autocomplete',
     isButton: () => kind === 'button',
+    isModalSubmit: () => false,
     isChatInputCommand: () => kind === 'chat',
     ...extra,
   } as unknown as Interaction;
