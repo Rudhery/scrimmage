@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import './env.js';
 import { Events } from 'discord.js';
 import { loadConfig } from './config.js';
 import { createLogger } from './logger.js';

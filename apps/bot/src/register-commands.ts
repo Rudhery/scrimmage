@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import './env.js';
 import { loadConfig } from './config.js';
 import { commandList } from './commands/index.js';
 import { registerCommands } from './lib/register.js';

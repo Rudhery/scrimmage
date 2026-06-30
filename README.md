@@ -107,7 +107,7 @@ to go.
 | `/scrim confirm <id>`                 | Confirm a proposed scrimmage.               |
 | `/scrim cancel <id>`                  | Cancel a scrimmage.                         |
 | `/scrim list [status]`                | List scrimmages, optionally filtered.       |
-| `/scrim result <id> <score>`          | Record the final score of a played match.   |
+| `/scrim result <id> <home> <away>`    | Record the final score of a confirmed match. |
 
 ## 📦 Using the SDK
 
@@ -117,7 +117,7 @@ The matchmaking logic is published as `@scrimmage/core` and can be used on its o
 import { TeamService, ScrimmageService } from '@scrimmage/core';
 import { createSqliteStorage } from '@scrimmage/storage-sqlite';
 
-const storage = createSqliteStorage({ path: './scrimmage.sqlite' });
+const storage = createSqliteStorage({ path: './scrimmage.sqlite', migrate: true });
 const teams = new TeamService(storage.teams);
 
 const redDragons = await teams.createTeam({

@@ -36,8 +36,9 @@
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "clean": "npm run clean --workspaces --if-present",
-    "dev": "npm run dev --workspace @scrimmage/bot",
-    "start": "npm run start --workspace @scrimmage/bot",
+    "dev": "tsx watch apps/bot/src/index.ts",
+    "start": "tsx apps/bot/src/index.ts",
+    "register": "tsx apps/bot/src/register-commands.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
@@ -47,7 +48,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "db:generate": "npm run db:generate --workspace @scrimmage/storage-sqlite",
-    "db:migrate": "npm run db:migrate --workspace @scrimmage/storage-sqlite",
+    "db:migrate": "tsx apps/bot/src/migrate.ts",
     "changeset": "changeset",
     "release": "npm run build && changeset publish"
   },

@@ -31,8 +31,7 @@
     "build": "tsup",
     "clean": "rimraf dist",
     "test": "vitest run",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
     "@scrimmage/core": "^0.1.0",
