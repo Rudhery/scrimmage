@@ -15,6 +15,7 @@ export const teams = sqliteTable(
     name: text('name').notNull(),
     tag: text('tag').notNull(),
     captainId: text('captain_id').notNull(),
+    description: text('description'),
     createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
   },
   (table) => [
@@ -30,6 +31,7 @@ export const teamMembers = sqliteTable(
       .notNull()
       .references(() => teams.id, { onDelete: 'cascade' }),
     userId: text('user_id').notNull(),
+    role: text('role').notNull().default('player'),
     joinedAt: integer('joined_at', { mode: 'timestamp_ms' }).notNull(),
   },
   (table) => [primaryKey({ columns: [table.teamId, table.userId] })],

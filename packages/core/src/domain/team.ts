@@ -13,14 +13,29 @@ export interface Team {
   readonly tag: string;
   /** Discord user id of the team captain. */
   readonly captainId: string;
+  /** Optional free-text description / bio. */
+  readonly description: string | null;
   /** When the team was created. */
   readonly createdAt: Date;
 }
+
+/**
+ * The function a member plays within a team. The captain is tracked separately
+ * on {@link Team.captainId}; everyone else carries one of these roles.
+ */
+export const TeamRole = {
+  Coach: 'coach',
+  Assistant: 'assistant',
+  Player: 'player',
+} as const;
+
+export type TeamRole = (typeof TeamRole)[keyof typeof TeamRole];
 
 /** Membership link between a Discord user and a team. */
 export interface TeamMember {
   readonly teamId: string;
   /** Discord user id of the member. */
   readonly userId: string;
+  readonly role: TeamRole;
   readonly joinedAt: Date;
 }

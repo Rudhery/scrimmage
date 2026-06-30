@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { TeamService } from './team-service.js';
+import { TeamRole } from '../domain/team.js';
 import { ConflictError, NotFoundError, ValidationError } from '../errors/index.js';
 import { createMemoryStorage } from '../testing/memory-storage.js';
 import type { Storage } from '../storage/repositories.js';
@@ -93,5 +94,16 @@ describe('TeamService', () => {
     await expect(service.transferCaptain(GUILD, team.id, 'user-9')).rejects.toBeInstanceOf(
       ConflictError,
     );
+  });
+
+  it('stores a description and assigns member roles', async () => {
+    const team = await service.createTeam({ ...baseInput(), description: 'We scrim nightly.' });
+    expect(team.description).toBe('We scrim nightly.');
+
+    const coach = await service.setMemberRole(GUILD, team.id, 'coach-1', TeamRole.Coach);
+    expect(coach.role).toBe(TeamRole.Coach);
+
+    const roster = await service.getRoster(team.id);
+    expect(roster.find((member) => member.userId === 'coach-1')?.role).toBe(TeamRole.Coach);
   });
 });

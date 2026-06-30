@@ -1,4 +1,4 @@
-import type { Team, TeamMember } from '../domain/team.js';
+import type { Team, TeamMember, TeamRole } from '../domain/team.js';
 import type { Scrimmage } from '../domain/scrimmage.js';
 import type {
   ScrimmageFilter,
@@ -67,6 +67,14 @@ class MemoryTeamRepository implements TeamRepository {
     const index = this.members.findIndex((m) => m.teamId === teamId && m.userId === userId);
     if (index >= 0) {
       this.members.splice(index, 1);
+    }
+  }
+
+  async setMemberRole(teamId: string, userId: string, role: TeamRole): Promise<void> {
+    const index = this.members.findIndex((m) => m.teamId === teamId && m.userId === userId);
+    const current = this.members[index];
+    if (current) {
+      this.members[index] = { ...current, role };
     }
   }
 

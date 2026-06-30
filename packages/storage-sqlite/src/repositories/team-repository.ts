@@ -1,5 +1,5 @@
 import { and, eq, sql } from 'drizzle-orm';
-import type { Team, TeamMember, TeamRepository } from '@scrimmage/core';
+import type { Team, TeamMember, TeamRepository, TeamRole } from '@scrimmage/core';
 import type { Db } from '../client.js';
 import { teamMembers, teams } from '../schema.js';
 
@@ -13,12 +13,18 @@ function toTeam(row: TeamRow): Team {
     name: row.name,
     tag: row.tag,
     captainId: row.captainId,
+    description: row.description,
     createdAt: row.createdAt,
   };
 }
 
 function toMember(row: MemberRow): TeamMember {
-  return { teamId: row.teamId, userId: row.userId, joinedAt: row.joinedAt };
+  return {
+    teamId: row.teamId,
+    userId: row.userId,
+    role: row.role as TeamRole,
+    joinedAt: row.joinedAt,
+  };
 }
 
 export class DrizzleTeamRepository implements TeamRepository {
@@ -32,7 +38,12 @@ export class DrizzleTeamRepository implements TeamRepository {
   async update(team: Team): Promise<Team> {
     this.db
       .update(teams)
-      .set({ name: team.name, tag: team.tag, captainId: team.captainId })
+      .set({
+        name: team.name,
+        tag: team.tag,
+        captainId: team.captainId,
+        description: team.description,
+      })
       .where(and(eq(teams.id, team.id), eq(teams.guildId, team.guildId)))
       .run();
     return team;
@@ -75,6 +86,14 @@ export class DrizzleTeamRepository implements TeamRepository {
   async removeMember(teamId: string, userId: string): Promise<void> {
     this.db
       .delete(teamMembers)
+      .where(and(eq(teamMembers.teamId, teamId), eq(teamMembers.userId, userId)))
+      .run();
+  }
+
+  async setMemberRole(teamId: string, userId: string, role: TeamRole): Promise<void> {
+    this.db
+      .update(teamMembers)
+      .set({ role })
       .where(and(eq(teamMembers.teamId, teamId), eq(teamMembers.userId, userId)))
       .run();
   }

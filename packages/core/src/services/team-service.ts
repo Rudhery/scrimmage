@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { Team, TeamMember } from '../domain/team.js';
+import { TeamRole, type Team, type TeamMember } from '../domain/team.js';
 import type { TeamRepository } from '../storage/repositories.js';
 import { ConflictError, NotFoundError } from '../errors/index.js';
 import { resolveRuntime, type ServiceRuntime } from '../runtime.js';
@@ -17,6 +17,7 @@ const createTeamSchema = z.object({
     .max(5)
     .regex(/^[A-Za-z0-9]+$/, 'Tag must contain only letters and numbers.'),
   captainId: z.string().min(1),
+  description: z.string().trim().max(300).optional(),
 });
 
 export type CreateTeamInput = z.infer<typeof createTeamSchema>;
@@ -50,6 +51,7 @@ export class TeamService {
       name: data.name,
       tag: data.tag.toUpperCase(),
       captainId: data.captainId,
+      description: data.description ?? null,
       createdAt: this.runtime.now(),
     };
 
@@ -57,6 +59,7 @@ export class TeamService {
     await this.teams.addMember({
       teamId: created.id,
       userId: created.captainId,
+      role: TeamRole.Player,
       joinedAt: created.createdAt,
     });
     return created;
@@ -116,13 +119,19 @@ export class TeamService {
       await this.teams.addMember({
         teamId,
         userId: newCaptainId,
+        role: TeamRole.Player,
         joinedAt: this.runtime.now(),
       });
     }
     return this.teams.update({ ...team, captainId: newCaptainId });
   }
 
-  async addMember(guildId: string, teamId: string, userId: string): Promise<TeamMember> {
+  async addMember(
+    guildId: string,
+    teamId: string,
+    userId: string,
+    role: TeamRole = TeamRole.Player,
+  ): Promise<TeamMember> {
     await this.getTeam(guildId, teamId);
 
     const existing = await this.teams.findMember(teamId, userId);
@@ -130,9 +139,28 @@ export class TeamService {
       throw new ConflictError('That user is already a member of this team.');
     }
 
-    const member: TeamMember = { teamId, userId, joinedAt: this.runtime.now() };
+    const member: TeamMember = { teamId, userId, role, joinedAt: this.runtime.now() };
     await this.teams.addMember(member);
     return member;
+  }
+
+  /** Set a member's role, adding them to the team first if they are not on it yet. */
+  async setMemberRole(
+    guildId: string,
+    teamId: string,
+    userId: string,
+    role: TeamRole,
+  ): Promise<TeamMember> {
+    await this.getTeam(guildId, teamId);
+
+    const existing = await this.teams.findMember(teamId, userId);
+    if (!existing) {
+      const member: TeamMember = { teamId, userId, role, joinedAt: this.runtime.now() };
+      await this.teams.addMember(member);
+      return member;
+    }
+    await this.teams.setMemberRole(teamId, userId, role);
+    return { ...existing, role };
   }
 
   async removeMember(guildId: string, teamId: string, userId: string): Promise<void> {

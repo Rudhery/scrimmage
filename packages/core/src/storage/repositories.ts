@@ -1,4 +1,4 @@
-import type { Team, TeamMember } from '../domain/team.js';
+import type { Team, TeamMember, TeamRole } from '../domain/team.js';
 import type { Scrimmage, ScrimmageStatus } from '../domain/scrimmage.js';
 
 /**
@@ -18,6 +18,7 @@ export interface TeamRepository {
 
   addMember(member: TeamMember): Promise<void>;
   removeMember(teamId: string, userId: string): Promise<void>;
+  setMemberRole(teamId: string, userId: string, role: TeamRole): Promise<void>;
   findMember(teamId: string, userId: string): Promise<TeamMember | null>;
   listMembers(teamId: string): Promise<TeamMember[]>;
 }
