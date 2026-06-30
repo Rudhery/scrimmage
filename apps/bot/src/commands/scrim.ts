@@ -1,4 +1,13 @@
-import { MessageFlags, SlashCommandBuilder, type ChatInputCommandInteraction } from 'discord.js';
+import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  MessageFlags,
+  SlashCommandBuilder,
+  type ButtonInteraction,
+  type ChatInputCommandInteraction,
+  type EmbedBuilder,
+} from 'discord.js';
 import { ScrimmageStatus, type Scrimmage, type Team } from '@scrimmage/core';
 import type { AppContext } from '../context.js';
 import type { Command } from '../lib/command.js';
@@ -175,6 +184,7 @@ async function propose(
   await interaction.reply({
     content: '📋 Scrimmage proposed!',
     embeds: [scrimmageEmbed(scrim, home, away)],
+    components: [scrimActionRow(scrim.id)],
   });
 }
 
@@ -183,15 +193,13 @@ async function confirm(
   context: AppContext,
   guildId: string,
 ): Promise<void> {
-  const scrim = await context.scrimmages.confirm(
+  const reply = await applyScrimAction(
+    context,
     guildId,
     interaction.options.getString('id', true),
+    'confirm',
   );
-  const [home, away] = await resolveTeams(context, guildId, scrim.homeTeamId, scrim.awayTeamId);
-  await interaction.reply({
-    content: '🟢 Scrimmage confirmed!',
-    embeds: [scrimmageEmbed(scrim, home, away)],
-  });
+  await interaction.reply(reply);
 }
 
 async function cancel(
@@ -199,12 +207,13 @@ async function cancel(
   context: AppContext,
   guildId: string,
 ): Promise<void> {
-  const scrim = await context.scrimmages.cancel(guildId, interaction.options.getString('id', true));
-  const [home, away] = await resolveTeams(context, guildId, scrim.homeTeamId, scrim.awayTeamId);
-  await interaction.reply({
-    content: '🔴 Scrimmage cancelled.',
-    embeds: [scrimmageEmbed(scrim, home, away)],
-  });
+  const reply = await applyScrimAction(
+    context,
+    guildId,
+    interaction.options.getString('id', true),
+    'cancel',
+  );
+  await interaction.reply(reply);
 }
 
 async function result(
@@ -242,6 +251,65 @@ async function list(
   );
 
   await interaction.reply({ embeds: [scrimmageListEmbed(lines, status)] });
+}
+
+type ScrimAction = 'confirm' | 'cancel';
+type ScrimReply = { content: string; embeds: EmbedBuilder[] };
+
+/** Run a confirm/cancel action and build the message that reports the result. */
+async function applyScrimAction(
+  context: AppContext,
+  guildId: string,
+  scrimId: string,
+  action: ScrimAction,
+): Promise<ScrimReply> {
+  const scrim =
+    action === 'confirm'
+      ? await context.scrimmages.confirm(guildId, scrimId)
+      : await context.scrimmages.cancel(guildId, scrimId);
+  const [home, away] = await resolveTeams(context, guildId, scrim.homeTeamId, scrim.awayTeamId);
+  return {
+    content: action === 'confirm' ? '🟢 Scrimmage confirmed!' : '🔴 Scrimmage cancelled.',
+    embeds: [scrimmageEmbed(scrim, home, away)],
+  };
+}
+
+const BUTTON_NAMESPACE = 'scrim';
+
+/** The Confirm/Cancel action row shown under a freshly proposed scrimmage. */
+function scrimActionRow(scrimId: string): ActionRowBuilder<ButtonBuilder> {
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`${BUTTON_NAMESPACE}:confirm:${scrimId}`)
+      .setLabel('Confirm')
+      .setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
+      .setCustomId(`${BUTTON_NAMESPACE}:cancel:${scrimId}`)
+      .setLabel('Cancel')
+      .setStyle(ButtonStyle.Danger),
+  );
+}
+
+/** Whether a button interaction belongs to the scrimmage commands. */
+export function isScrimButton(customId: string): boolean {
+  return customId.startsWith(`${BUTTON_NAMESPACE}:`);
+}
+
+/** Handle a Confirm/Cancel button on a proposed scrimmage. */
+export async function handleScrimButton(
+  interaction: ButtonInteraction,
+  context: AppContext,
+): Promise<void> {
+  const guildId = interaction.guildId;
+  if (!guildId) {
+    return;
+  }
+  const [, action, scrimId] = interaction.customId.split(':');
+  if ((action !== 'confirm' && action !== 'cancel') || !scrimId) {
+    return;
+  }
+  const reply = await applyScrimAction(context, guildId, scrimId, action);
+  await interaction.update({ ...reply, components: [] });
 }
 
 /** Resolve both teams of a scrimmage, tolerating teams that were deleted. */

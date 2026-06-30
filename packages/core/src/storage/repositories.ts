@@ -9,6 +9,7 @@ import type { Scrimmage, ScrimmageStatus } from '../domain/scrimmage.js';
  */
 export interface TeamRepository {
   create(team: Team): Promise<Team>;
+  update(team: Team): Promise<Team>;
   findById(guildId: string, id: string): Promise<Team | null>;
   /** Case-insensitive lookup by name within a guild. */
   findByName(guildId: string, name: string): Promise<Team | null>;

@@ -109,6 +109,8 @@ For Docker and production deployment, see the [deployment guide](./docs/DEPLOYME
 | `/team delete <team>`                 | Delete a team.                               |
 | `/team list`                          | List every team in the server.               |
 | `/team info <team>`                   | Show a team's details and roster.            |
+| `/team rename <team> <name>`          | Rename a team.                               |
+| `/team captain <team> <user>`         | Transfer captaincy to another member.        |
 | `/team member add <team> <user>`      | Add a member to a team.                      |
 | `/team member remove <team> <user>`   | Remove a member from a team.                 |
 | `/scrim propose <home> <away> <when>` | Propose a friendly match between two teams.  |
@@ -116,6 +118,10 @@ For Docker and production deployment, see the [deployment guide](./docs/DEPLOYME
 | `/scrim cancel <id>`                  | Cancel a scrimmage.                          |
 | `/scrim list [status]`                | List scrimmages, optionally filtered.        |
 | `/scrim result <id> <home> <away>`    | Record the final score of a confirmed match. |
+
+Team and scrimmage options offer **autocomplete**, and a freshly proposed scrimmage comes with
+**Confirm / Cancel buttons** so captains can act in one click. Renaming, deleting and roster changes
+require the team captain or a member with the **Manage Server** permission.
 
 ## 📦 Using the SDK
 

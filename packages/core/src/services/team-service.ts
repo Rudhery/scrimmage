@@ -5,9 +5,11 @@ import { ConflictError, NotFoundError } from '../errors/index.js';
 import { resolveRuntime, type ServiceRuntime } from '../runtime.js';
 import { parse } from '../validation.js';
 
+const teamNameSchema = z.string().trim().min(2).max(50);
+
 const createTeamSchema = z.object({
   guildId: z.string().min(1),
-  name: z.string().trim().min(2).max(50),
+  name: teamNameSchema,
   tag: z
     .string()
     .trim()
@@ -85,6 +87,39 @@ export class TeamService {
   async deleteTeam(guildId: string, teamId: string): Promise<void> {
     await this.getTeam(guildId, teamId);
     await this.teams.delete(guildId, teamId);
+  }
+
+  /** Rename a team, enforcing the same name rules and uniqueness as creation. */
+  async renameTeam(guildId: string, teamId: string, newName: string): Promise<Team> {
+    const name = parse(teamNameSchema, newName);
+    const team = await this.getTeam(guildId, teamId);
+
+    const clash = await this.teams.findByName(guildId, name);
+    if (clash && clash.id !== team.id) {
+      throw new ConflictError(`A team named "${name}" already exists in this server.`);
+    }
+    return this.teams.update({ ...team, name });
+  }
+
+  /**
+   * Hand captaincy to another user. The new captain is added to the roster first
+   * if they are not already a member.
+   */
+  async transferCaptain(guildId: string, teamId: string, newCaptainId: string): Promise<Team> {
+    const team = await this.getTeam(guildId, teamId);
+    if (team.captainId === newCaptainId) {
+      throw new ConflictError('That user is already the captain.');
+    }
+
+    const member = await this.teams.findMember(teamId, newCaptainId);
+    if (!member) {
+      await this.teams.addMember({
+        teamId,
+        userId: newCaptainId,
+        joinedAt: this.runtime.now(),
+      });
+    }
+    return this.teams.update({ ...team, captainId: newCaptainId });
   }
 
   async addMember(guildId: string, teamId: string, userId: string): Promise<TeamMember> {

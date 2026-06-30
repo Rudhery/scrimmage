@@ -43,6 +43,28 @@ export const teamCommand: Command = {
           opt.setName('team').setDescription('Team name').setRequired(true).setAutocomplete(true),
         ),
     )
+    .addSubcommand((sub) =>
+      sub
+        .setName('rename')
+        .setDescription('Rename a team.')
+        .addStringOption((opt) =>
+          opt.setName('team').setDescription('Team name').setRequired(true).setAutocomplete(true),
+        )
+        .addStringOption((opt) =>
+          opt.setName('name').setDescription('New team name').setRequired(true).setMaxLength(50),
+        ),
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName('captain')
+        .setDescription('Transfer captaincy to another member.')
+        .addStringOption((opt) =>
+          opt.setName('team').setDescription('Team name').setRequired(true).setAutocomplete(true),
+        )
+        .addUserOption((opt) =>
+          opt.setName('user').setDescription('The new captain').setRequired(true),
+        ),
+    )
     .addSubcommandGroup((group) =>
       group
         .setName('member')
@@ -107,6 +129,12 @@ export const teamCommand: Command = {
       case 'info':
         await teamInfo(interaction, context, guildId);
         return;
+      case 'rename':
+        await renameTeam(interaction, context, guildId);
+        return;
+      case 'captain':
+        await transferCaptain(interaction, context, guildId);
+        return;
     }
   },
 
@@ -170,6 +198,49 @@ async function teamInfo(
   );
   const roster = await context.teams.getRoster(team.id);
   await interaction.reply({ embeds: [teamEmbed(team, roster)] });
+}
+
+async function renameTeam(
+  interaction: ChatInputCommandInteraction,
+  context: AppContext,
+  guildId: string,
+): Promise<void> {
+  const team = await context.teams.getTeamByName(
+    guildId,
+    interaction.options.getString('team', true),
+  );
+  if (!canManageTeam(interaction, team)) {
+    await interaction.reply({ content: PERMISSION_DENIED, flags: MessageFlags.Ephemeral });
+    return;
+  }
+  const renamed = await context.teams.renameTeam(
+    guildId,
+    team.id,
+    interaction.options.getString('name', true),
+  );
+  await interaction.reply(`✏️ Renamed **${team.name}** to **${renamed.name}**.`);
+}
+
+async function transferCaptain(
+  interaction: ChatInputCommandInteraction,
+  context: AppContext,
+  guildId: string,
+): Promise<void> {
+  const user = interaction.options.getUser('user', true);
+  const team = await context.teams.getTeamByName(
+    guildId,
+    interaction.options.getString('team', true),
+  );
+  if (!canManageTeam(interaction, team)) {
+    await interaction.reply({ content: PERMISSION_DENIED, flags: MessageFlags.Ephemeral });
+    return;
+  }
+  const updated = await context.teams.transferCaptain(guildId, team.id, user.id);
+  const roster = await context.teams.getRoster(updated.id);
+  await interaction.reply({
+    content: `👑 <@${user.id}> is now the captain of **${updated.name}**.`,
+    embeds: [teamEmbed(updated, roster)],
+  });
 }
 
 async function addMember(

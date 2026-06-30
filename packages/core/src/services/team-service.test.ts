@@ -71,4 +71,27 @@ describe('TeamService', () => {
       ConflictError,
     );
   });
+
+  it('renames a team and rejects clashing names', async () => {
+    const team = await service.createTeam(baseInput());
+    const renamed = await service.renameTeam(GUILD, team.id, 'Blue Wolves');
+    expect(renamed.name).toBe('Blue Wolves');
+
+    await service.createTeam({ ...baseInput(), name: 'Green Owls', tag: 'GRN' });
+    await expect(service.renameTeam(GUILD, team.id, 'Green Owls')).rejects.toBeInstanceOf(
+      ConflictError,
+    );
+  });
+
+  it('transfers captaincy, adding the new captain to the roster if needed', async () => {
+    const team = await service.createTeam(baseInput());
+
+    const updated = await service.transferCaptain(GUILD, team.id, 'user-9');
+    expect(updated.captainId).toBe('user-9');
+    expect((await service.getRoster(team.id)).map((member) => member.userId)).toContain('user-9');
+
+    await expect(service.transferCaptain(GUILD, team.id, 'user-9')).rejects.toBeInstanceOf(
+      ConflictError,
+    );
+  });
 });

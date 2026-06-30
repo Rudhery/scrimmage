@@ -29,6 +29,15 @@ export class DrizzleTeamRepository implements TeamRepository {
     return team;
   }
 
+  async update(team: Team): Promise<Team> {
+    this.db
+      .update(teams)
+      .set({ name: team.name, tag: team.tag, captainId: team.captainId })
+      .where(and(eq(teams.id, team.id), eq(teams.guildId, team.guildId)))
+      .run();
+    return team;
+  }
+
   async findById(guildId: string, id: string): Promise<Team | null> {
     const row = this.db
       .select()

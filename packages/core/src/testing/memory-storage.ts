@@ -22,6 +22,11 @@ class MemoryTeamRepository implements TeamRepository {
     return team;
   }
 
+  async update(team: Team): Promise<Team> {
+    this.teams.set(team.id, team);
+    return team;
+  }
+
   async findById(guildId: string, id: string): Promise<Team | null> {
     const team = this.teams.get(id);
     return team && team.guildId === guildId ? team : null;
