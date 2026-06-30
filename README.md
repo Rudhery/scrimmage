@@ -95,18 +95,18 @@ to go.
 
 ## 💬 Commands
 
-| Command                               | Description                                 |
-| ------------------------------------- | ------------------------------------------- |
-| `/team create <name> <tag>`           | Create a new team.                          |
-| `/team delete <team>`                 | Delete a team.                              |
-| `/team list`                          | List every team in the server.              |
-| `/team info <team>`                   | Show a team's details and roster.           |
-| `/team member add <team> <user>`      | Add a member to a team.                     |
-| `/team member remove <team> <user>`   | Remove a member from a team.                |
-| `/scrim propose <home> <away> <when>` | Propose a friendly match between two teams. |
-| `/scrim confirm <id>`                 | Confirm a proposed scrimmage.               |
-| `/scrim cancel <id>`                  | Cancel a scrimmage.                         |
-| `/scrim list [status]`                | List scrimmages, optionally filtered.       |
+| Command                               | Description                                  |
+| ------------------------------------- | -------------------------------------------- |
+| `/team create <name> <tag>`           | Create a new team.                           |
+| `/team delete <team>`                 | Delete a team.                               |
+| `/team list`                          | List every team in the server.               |
+| `/team info <team>`                   | Show a team's details and roster.            |
+| `/team member add <team> <user>`      | Add a member to a team.                      |
+| `/team member remove <team> <user>`   | Remove a member from a team.                 |
+| `/scrim propose <home> <away> <when>` | Propose a friendly match between two teams.  |
+| `/scrim confirm <id>`                 | Confirm a proposed scrimmage.                |
+| `/scrim cancel <id>`                  | Cancel a scrimmage.                          |
+| `/scrim list [status]`                | List scrimmages, optionally filtered.        |
 | `/scrim result <id> <home> <away>`    | Record the final score of a confirmed match. |
 
 ## 📦 Using the SDK
