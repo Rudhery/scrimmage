@@ -1,9 +1,11 @@
 import { MessageFlags, SlashCommandBuilder, type ChatInputCommandInteraction } from 'discord.js';
-import { ScrimmageStatus, type Team } from '@scrimmage/core';
+import { ScrimmageStatus, type Scrimmage, type Team } from '@scrimmage/core';
 import type { AppContext } from '../context.js';
 import type { Command } from '../lib/command.js';
 import { parseSchedule } from '../lib/time.js';
 import { scrimmageEmbed, scrimmageLine, scrimmageListEmbed } from '../lib/format.js';
+import { requireGuildId } from '../lib/interaction.js';
+import { respondScrimmageIds, respondTeamNames } from '../lib/autocomplete.js';
 
 export const scrimCommand: Command = {
   data: new SlashCommandBuilder()
@@ -14,10 +16,18 @@ export const scrimCommand: Command = {
         .setName('propose')
         .setDescription('Propose a friendly match between two teams.')
         .addStringOption((opt) =>
-          opt.setName('home').setDescription('Home team name').setRequired(true),
+          opt
+            .setName('home')
+            .setDescription('Home team name')
+            .setRequired(true)
+            .setAutocomplete(true),
         )
         .addStringOption((opt) =>
-          opt.setName('away').setDescription('Away team name').setRequired(true),
+          opt
+            .setName('away')
+            .setDescription('Away team name')
+            .setRequired(true)
+            .setAutocomplete(true),
         )
         .addStringOption((opt) =>
           opt
@@ -31,7 +41,7 @@ export const scrimCommand: Command = {
         .setName('confirm')
         .setDescription('Confirm a proposed scrimmage.')
         .addStringOption((opt) =>
-          opt.setName('id').setDescription('Scrimmage ID').setRequired(true),
+          opt.setName('id').setDescription('Scrimmage').setRequired(true).setAutocomplete(true),
         ),
     )
     .addSubcommand((sub) =>
@@ -39,7 +49,7 @@ export const scrimCommand: Command = {
         .setName('cancel')
         .setDescription('Cancel a scrimmage.')
         .addStringOption((opt) =>
-          opt.setName('id').setDescription('Scrimmage ID').setRequired(true),
+          opt.setName('id').setDescription('Scrimmage').setRequired(true).setAutocomplete(true),
         ),
     )
     .addSubcommand((sub) =>
@@ -63,7 +73,7 @@ export const scrimCommand: Command = {
         .setName('result')
         .setDescription('Record the final score of a confirmed scrimmage.')
         .addStringOption((opt) =>
-          opt.setName('id').setDescription('Scrimmage ID').setRequired(true),
+          opt.setName('id').setDescription('Scrimmage').setRequired(true).setAutocomplete(true),
         )
         .addIntegerOption((opt) =>
           opt.setName('home').setDescription('Home team score').setRequired(true).setMinValue(0),
@@ -74,12 +84,8 @@ export const scrimCommand: Command = {
     ),
 
   async execute(interaction, context) {
-    const guildId = interaction.guildId;
+    const guildId = await requireGuildId(interaction);
     if (!guildId) {
-      await interaction.reply({
-        content: 'This command can only be used in a server.',
-        flags: MessageFlags.Ephemeral,
-      });
       return;
     }
 
@@ -101,7 +107,39 @@ export const scrimCommand: Command = {
         return;
     }
   },
+
+  async autocomplete(interaction, context) {
+    const focused = interaction.options.getFocused(true);
+    if (focused.name === 'home' || focused.name === 'away') {
+      await respondTeamNames(interaction, context);
+      return;
+    }
+    if (focused.name === 'id') {
+      await respondScrimmageIds(
+        interaction,
+        context,
+        eligibleFor(interaction.options.getSubcommand()),
+      );
+      return;
+    }
+    await interaction.respond([]);
+  },
 };
+
+/** Which scrimmages a given subcommand can act on — drives the ID autocomplete. */
+function eligibleFor(subcommand: string): (scrim: Scrimmage) => boolean {
+  switch (subcommand) {
+    case 'confirm':
+      return (scrim) => scrim.status === ScrimmageStatus.Proposed;
+    case 'result':
+      return (scrim) => scrim.status === ScrimmageStatus.Confirmed;
+    case 'cancel':
+      return (scrim) =>
+        scrim.status === ScrimmageStatus.Proposed || scrim.status === ScrimmageStatus.Confirmed;
+    default:
+      return () => true;
+  }
+}
 
 async function propose(
   interaction: ChatInputCommandInteraction,

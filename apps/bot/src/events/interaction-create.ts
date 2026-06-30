@@ -10,6 +10,19 @@ export async function handleInteraction(
   context: AppContext,
   commands: Collection<string, Command>,
 ): Promise<void> {
+  if (interaction.isAutocomplete()) {
+    const command = commands.get(interaction.commandName);
+    if (!command?.autocomplete) {
+      return;
+    }
+    try {
+      await command.autocomplete(interaction, context);
+    } catch (error) {
+      context.logger.error({ err: error, command: interaction.commandName }, 'autocomplete failed');
+    }
+    return;
+  }
+
   if (!interaction.isChatInputCommand()) {
     return;
   }

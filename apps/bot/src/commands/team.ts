@@ -2,6 +2,10 @@ import { MessageFlags, SlashCommandBuilder, type ChatInputCommandInteraction } f
 import type { AppContext } from '../context.js';
 import type { Command } from '../lib/command.js';
 import { teamEmbed, teamListEmbed } from '../lib/format.js';
+import { canManageTeam, requireGuildId } from '../lib/interaction.js';
+import { respondTeamNames } from '../lib/autocomplete.js';
+
+const PERMISSION_DENIED = '❌ Only the team captain or a server manager can do that.';
 
 export const teamCommand: Command = {
   data: new SlashCommandBuilder()
@@ -27,7 +31,7 @@ export const teamCommand: Command = {
         .setName('delete')
         .setDescription('Delete a team.')
         .addStringOption((opt) =>
-          opt.setName('team').setDescription('Team name').setRequired(true),
+          opt.setName('team').setDescription('Team name').setRequired(true).setAutocomplete(true),
         ),
     )
     .addSubcommand((sub) => sub.setName('list').setDescription('List all teams in this server.'))
@@ -36,7 +40,7 @@ export const teamCommand: Command = {
         .setName('info')
         .setDescription("Show a team's details and roster.")
         .addStringOption((opt) =>
-          opt.setName('team').setDescription('Team name').setRequired(true),
+          opt.setName('team').setDescription('Team name').setRequired(true).setAutocomplete(true),
         ),
     )
     .addSubcommandGroup((group) =>
@@ -48,7 +52,11 @@ export const teamCommand: Command = {
             .setName('add')
             .setDescription('Add a member to a team.')
             .addStringOption((opt) =>
-              opt.setName('team').setDescription('Team name').setRequired(true),
+              opt
+                .setName('team')
+                .setDescription('Team name')
+                .setRequired(true)
+                .setAutocomplete(true),
             )
             .addUserOption((opt) =>
               opt.setName('user').setDescription('Member to add').setRequired(true),
@@ -59,7 +67,11 @@ export const teamCommand: Command = {
             .setName('remove')
             .setDescription('Remove a member from a team.')
             .addStringOption((opt) =>
-              opt.setName('team').setDescription('Team name').setRequired(true),
+              opt
+                .setName('team')
+                .setDescription('Team name')
+                .setRequired(true)
+                .setAutocomplete(true),
             )
             .addUserOption((opt) =>
               opt.setName('user').setDescription('Member to remove').setRequired(true),
@@ -68,28 +80,21 @@ export const teamCommand: Command = {
     ),
 
   async execute(interaction, context) {
-    const guildId = interaction.guildId;
+    const guildId = await requireGuildId(interaction);
     if (!guildId) {
-      await interaction.reply({
-        content: 'This command can only be used in a server.',
-        flags: MessageFlags.Ephemeral,
-      });
       return;
     }
 
-    const group = interaction.options.getSubcommandGroup(false);
-    const sub = interaction.options.getSubcommand();
-
-    if (group === 'member') {
-      if (sub === 'add') {
+    if (interaction.options.getSubcommandGroup(false) === 'member') {
+      if (interaction.options.getSubcommand() === 'add') {
         await addMember(interaction, context, guildId);
-        return;
+      } else {
+        await removeMember(interaction, context, guildId);
       }
-      await removeMember(interaction, context, guildId);
       return;
     }
 
-    switch (sub) {
+    switch (interaction.options.getSubcommand()) {
       case 'create':
         await createTeam(interaction, context, guildId);
         return;
@@ -104,6 +109,10 @@ export const teamCommand: Command = {
         return;
     }
   },
+
+  async autocomplete(interaction, context) {
+    await respondTeamNames(interaction, context);
+  },
 };
 
 async function createTeam(
@@ -111,13 +120,10 @@ async function createTeam(
   context: AppContext,
   guildId: string,
 ): Promise<void> {
-  const name = interaction.options.getString('name', true);
-  const tag = interaction.options.getString('tag', true);
-
   const team = await context.teams.createTeam({
     guildId,
-    name,
-    tag,
+    name: interaction.options.getString('name', true),
+    tag: interaction.options.getString('tag', true),
     captainId: interaction.user.id,
   });
   const roster = await context.teams.getRoster(team.id);
@@ -132,8 +138,14 @@ async function deleteTeam(
   context: AppContext,
   guildId: string,
 ): Promise<void> {
-  const name = interaction.options.getString('team', true);
-  const team = await context.teams.getTeamByName(guildId, name);
+  const team = await context.teams.getTeamByName(
+    guildId,
+    interaction.options.getString('team', true),
+  );
+  if (!canManageTeam(interaction, team)) {
+    await interaction.reply({ content: PERMISSION_DENIED, flags: MessageFlags.Ephemeral });
+    return;
+  }
   await context.teams.deleteTeam(guildId, team.id);
   await interaction.reply(`🗑️ Deleted **${team.name}**.`);
 }
@@ -152,8 +164,10 @@ async function teamInfo(
   context: AppContext,
   guildId: string,
 ): Promise<void> {
-  const name = interaction.options.getString('team', true);
-  const team = await context.teams.getTeamByName(guildId, name);
+  const team = await context.teams.getTeamByName(
+    guildId,
+    interaction.options.getString('team', true),
+  );
   const roster = await context.teams.getRoster(team.id);
   await interaction.reply({ embeds: [teamEmbed(team, roster)] });
 }
@@ -163,9 +177,15 @@ async function addMember(
   context: AppContext,
   guildId: string,
 ): Promise<void> {
-  const name = interaction.options.getString('team', true);
   const user = interaction.options.getUser('user', true);
-  const team = await context.teams.getTeamByName(guildId, name);
+  const team = await context.teams.getTeamByName(
+    guildId,
+    interaction.options.getString('team', true),
+  );
+  if (!canManageTeam(interaction, team)) {
+    await interaction.reply({ content: PERMISSION_DENIED, flags: MessageFlags.Ephemeral });
+    return;
+  }
   await context.teams.addMember(guildId, team.id, user.id);
   await interaction.reply(`✅ Added <@${user.id}> to **${team.name}**.`);
 }
@@ -175,9 +195,15 @@ async function removeMember(
   context: AppContext,
   guildId: string,
 ): Promise<void> {
-  const name = interaction.options.getString('team', true);
   const user = interaction.options.getUser('user', true);
-  const team = await context.teams.getTeamByName(guildId, name);
+  const team = await context.teams.getTeamByName(
+    guildId,
+    interaction.options.getString('team', true),
+  );
+  if (!canManageTeam(interaction, team)) {
+    await interaction.reply({ content: PERMISSION_DENIED, flags: MessageFlags.Ephemeral });
+    return;
+  }
   await context.teams.removeMember(guildId, team.id, user.id);
   await interaction.reply(`👋 Removed <@${user.id}> from **${team.name}**.`);
 }
