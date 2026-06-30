@@ -2,12 +2,11 @@
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "noEmit": true,
-    "baseUrl": ".",
     "paths": {
-      "@scrimmage/core": ["packages/core/src/index.ts"],
-      "@scrimmage/core/*": ["packages/core/src/*"],
-      "@scrimmage/storage-sqlite": ["packages/storage-sqlite/src/index.ts"],
-      "@scrimmage/storage-sqlite/*": ["packages/storage-sqlite/src/*"]
+      "@scrimmage/core": ["./packages/core/src/index.ts"],
+      "@scrimmage/core/*": ["./packages/core/src/*"],
+      "@scrimmage/storage-sqlite": ["./packages/storage-sqlite/src/index.ts"],
+      "@scrimmage/storage-sqlite/*": ["./packages/storage-sqlite/src/*"]
     }
   },
   "include": ["packages/*/src/**/*", "apps/*/src/**/*", "scripts/**/*", "*.config.ts"],
