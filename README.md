@@ -30,6 +30,8 @@ possible front-ends.
 - **Standings & stats** — a league table (W/D/L, goal difference, points) from recorded results.
 - **Player stats & MVP** — record per-player, per-match stats (configurable categories, volleyball
   preset) and get a weighted MVP leaderboard.
+- **Multi-language** — English, Português (BR) and Español, chosen per server (`/config language`)
+  or from each user's Discord locale.
 - **Server-scoped** — every team and match belongs to the guild it was created in.
 - **Pluggable storage** — the default is SQLite via Drizzle ORM; the storage layer is an interface,
   so other backends (PostgreSQL, in-memory, …) can be added without touching the domain logic.
@@ -144,6 +146,7 @@ For Docker and production deployment, see the [deployment guide](./docs/DEPLOYME
 | `/stats player <user>`                | Show a player's totals and MVP score.        |
 | `/config view`                        | Show the server settings.                    |
 | `/config announce [channel]`          | Set/clear the announcement channel.          |
+| `/config language <lang>`             | Set the server language (or auto).           |
 
 Teams have a **captain**, **coaches**, **assistants**, **players** and an optional **crest/logo**.
 `/team create` opens a **modal form**, team and scrimmage options offer **autocomplete**, and a

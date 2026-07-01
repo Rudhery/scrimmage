@@ -65,6 +65,7 @@ export const scrimmages = sqliteTable(
 export const guildSettings = sqliteTable('guild_settings', {
   guildId: text('guild_id').primaryKey(),
   announceChannelId: text('announce_channel_id'),
+  language: text('language'),
 });
 
 export const statCategories = sqliteTable(

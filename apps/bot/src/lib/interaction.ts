@@ -1,5 +1,6 @@
 import { MessageFlags, PermissionFlagsBits, type ChatInputCommandInteraction } from 'discord.js';
 import type { Team } from '@scrimmage/core';
+import { DEFAULT_LOCALE, normalizeLocale, translate } from '../i18n/index.js';
 
 /**
  * Ensure the command was used inside a guild. Replies with an ephemeral notice
@@ -16,8 +17,9 @@ export async function requireGuildId(
   if (interaction.guildId) {
     return interaction.guildId;
   }
+  const locale = normalizeLocale(interaction.locale) ?? DEFAULT_LOCALE;
   await interaction.reply({
-    content: 'This command can only be used in a server.',
+    content: translate(locale, 'error.guildOnly'),
     flags: MessageFlags.Ephemeral,
   });
   return null;

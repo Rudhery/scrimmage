@@ -2,7 +2,7 @@ import type { GuildSettings } from '../domain/guild-settings.js';
 import type { GuildSettingsRepository } from '../storage/repositories.js';
 
 function defaults(guildId: string): GuildSettings {
-  return { guildId, announceChannelId: null };
+  return { guildId, announceChannelId: null, language: null };
 }
 
 /** Reads and updates per-guild settings, returning sensible defaults when unset. */
@@ -18,5 +18,11 @@ export class GuildSettingsService {
   async setAnnounceChannel(guildId: string, channelId: string | null): Promise<GuildSettings> {
     const current = await this.get(guildId);
     return this.settings.upsert({ ...current, announceChannelId: channelId });
+  }
+
+  /** Set or clear (with `null`) the preferred language. */
+  async setLanguage(guildId: string, language: string | null): Promise<GuildSettings> {
+    const current = await this.get(guildId);
+    return this.settings.upsert({ ...current, language });
   }
 }

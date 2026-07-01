@@ -12,16 +12,22 @@ export class DrizzleGuildSettingsRepository implements GuildSettingsRepository {
       .from(guildSettings)
       .where(eq(guildSettings.guildId, guildId))
       .get();
-    return row ? { guildId: row.guildId, announceChannelId: row.announceChannelId } : null;
+    return row
+      ? { guildId: row.guildId, announceChannelId: row.announceChannelId, language: row.language }
+      : null;
   }
 
   async upsert(settings: GuildSettings): Promise<GuildSettings> {
     this.db
       .insert(guildSettings)
-      .values({ guildId: settings.guildId, announceChannelId: settings.announceChannelId })
+      .values({
+        guildId: settings.guildId,
+        announceChannelId: settings.announceChannelId,
+        language: settings.language,
+      })
       .onConflictDoUpdate({
         target: guildSettings.guildId,
-        set: { announceChannelId: settings.announceChannelId },
+        set: { announceChannelId: settings.announceChannelId, language: settings.language },
       })
       .run();
     return settings;
