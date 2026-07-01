@@ -1,3 +1,4 @@
+import { time, TimestampStyles } from 'discord.js';
 import type { Scrimmage, Team } from '@scrimmage/core';
 import type { AppContext } from '../context.js';
 import { dmUser, dmUsers } from '../lib/notify.js';
@@ -42,6 +43,37 @@ export function registerNotifications(context: AppContext): void {
   events.on('scrimmage.played', ({ scrimmage }) =>
     announceScrim(scrimmage, '📣 A scrimmage result was recorded:'),
   );
+
+  events.on('scrimmage.reminderDue', async ({ scrimmage }) => {
+    const [home, away] = await resolveScrimTeams(scrimmage);
+    const captains = captainsOf(home, away);
+    const embed = scrimmageEmbed(scrimmage, home, away);
+    const kickoff = time(scrimmage.scheduledAt, TimestampStyles.RelativeTime);
+
+    // Announce in the channel it was proposed in, if we still can.
+    if (scrimmage.channelId) {
+      try {
+        const channel = await client.channels.fetch(scrimmage.channelId);
+        if (channel && channel.isTextBased() && !channel.isDMBased()) {
+          const mentions = captains.map((id) => `<@${id}>`).join(' ');
+          await channel.send({
+            content: `${mentions} ⏰ Reminder: your scrimmage kicks off ${kickoff}!`.trim(),
+            embeds: [embed],
+          });
+        }
+      } catch (error) {
+        logger.debug({ err: error, channelId: scrimmage.channelId }, 'could not post reminder');
+      }
+    }
+
+    // Always DM the captains too.
+    await dmUsers(
+      client,
+      captains,
+      { content: `⏰ Your scrimmage kicks off ${kickoff}!`, embeds: [embed] },
+      logger,
+    );
+  });
 
   events.on('team.memberAdded', async ({ team, member }) => {
     await dmUser(client, member.userId, `✅ You were added to **${team.name}**.`, logger);

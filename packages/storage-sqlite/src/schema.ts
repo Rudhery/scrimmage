@@ -50,6 +50,8 @@ export const scrimmages = sqliteTable(
     homeScore: integer('home_score'),
     awayScore: integer('away_score'),
     proposedBy: text('proposed_by').notNull(),
+    channelId: text('channel_id'),
+    reminderSentAt: integer('reminder_sent_at', { mode: 'timestamp_ms' }),
     createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
   },
   (table) => [

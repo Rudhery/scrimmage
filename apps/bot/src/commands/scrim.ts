@@ -191,6 +191,7 @@ async function propose(
     awayTeamId: away.id,
     scheduledAt,
     proposedBy: interaction.user.id,
+    channelId: interaction.channelId ?? undefined,
   });
   await interaction.reply({
     content: '📋 Scrimmage proposed!',

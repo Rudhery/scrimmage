@@ -35,5 +35,9 @@ export interface Scrimmage {
   readonly result: ScrimmageResult | null;
   /** Discord user id of whoever proposed the match. */
   readonly proposedBy: string;
+  /** Channel the match was proposed in, used to post the pre-game reminder. */
+  readonly channelId: string | null;
+  /** When the pre-game reminder was sent, or `null` if not yet sent. */
+  readonly reminderSentAt: Date | null;
   readonly createdAt: Date;
 }

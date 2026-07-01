@@ -35,6 +35,11 @@ export interface ScrimmageRepository {
   findById(guildId: string, id: string): Promise<Scrimmage | null>;
   list(guildId: string, filter?: ScrimmageFilter): Promise<Scrimmage[]>;
   update(scrimmage: Scrimmage): Promise<Scrimmage>;
+  /**
+   * Confirmed scrimmages (across all guilds) that still need a pre-game reminder:
+   * `reminderSentAt` is null and `scheduledAt <= before`.
+   */
+  listDueReminders(before: Date): Promise<Scrimmage[]>;
 }
 
 /**

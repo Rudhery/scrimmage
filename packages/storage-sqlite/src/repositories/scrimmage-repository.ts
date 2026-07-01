@@ -1,4 +1,4 @@
-import { and, eq, or, type SQL } from 'drizzle-orm';
+import { and, eq, isNull, lte, or, type SQL } from 'drizzle-orm';
 import type {
   Scrimmage,
   ScrimmageFilter,
@@ -25,6 +25,8 @@ function toScrimmage(row: ScrimmageRow): Scrimmage {
     status: row.status as ScrimmageStatus,
     result,
     proposedBy: row.proposedBy,
+    channelId: row.channelId,
+    reminderSentAt: row.reminderSentAt,
     createdAt: row.createdAt,
   };
 }
@@ -45,6 +47,8 @@ export class DrizzleScrimmageRepository implements ScrimmageRepository {
         homeScore: scrimmage.result?.homeScore ?? null,
         awayScore: scrimmage.result?.awayScore ?? null,
         proposedBy: scrimmage.proposedBy,
+        channelId: scrimmage.channelId,
+        reminderSentAt: scrimmage.reminderSentAt,
         createdAt: scrimmage.createdAt,
       })
       .run();
@@ -91,9 +95,26 @@ export class DrizzleScrimmageRepository implements ScrimmageRepository {
         status: scrimmage.status,
         homeScore: scrimmage.result?.homeScore ?? null,
         awayScore: scrimmage.result?.awayScore ?? null,
+        channelId: scrimmage.channelId,
+        reminderSentAt: scrimmage.reminderSentAt,
       })
       .where(and(eq(scrimmages.id, scrimmage.id), eq(scrimmages.guildId, scrimmage.guildId)))
       .run();
     return scrimmage;
+  }
+
+  async listDueReminders(before: Date): Promise<Scrimmage[]> {
+    const rows = this.db
+      .select()
+      .from(scrimmages)
+      .where(
+        and(
+          eq(scrimmages.status, 'confirmed'),
+          isNull(scrimmages.reminderSentAt),
+          lte(scrimmages.scheduledAt, before),
+        ),
+      )
+      .all();
+    return rows.map(toScrimmage);
   }
 }

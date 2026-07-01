@@ -8,6 +8,7 @@ import { commandList, commands } from './commands/index.js';
 import { registerCommands } from './lib/register.js';
 import { handleInteraction } from './events/interaction-create.js';
 import { registerNotifications } from './events/notifications.js';
+import { startReminderLoop } from './events/reminders.js';
 
 async function main(): Promise<void> {
   const config = loadConfig();
@@ -16,8 +17,13 @@ async function main(): Promise<void> {
   const context = createContext(config, logger, client);
   registerNotifications(context);
 
+  let stopReminders: (() => void) | undefined;
+
   client.once(Events.ClientReady, async (ready) => {
     logger.info(`Logged in as ${ready.user.tag}`);
+
+    // Start the pre-game reminder loop only once the client can actually post.
+    stopReminders = startReminderLoop(context);
 
     // Guild commands update instantly, so auto-register them in development.
     // For global commands, run `npm run register` explicitly.
@@ -37,6 +43,7 @@ async function main(): Promise<void> {
 
   async function shutdown(signal: string): Promise<void> {
     logger.info({ signal }, 'shutting down');
+    stopReminders?.();
     await client.destroy();
     await context.storage.close();
     process.exit(0);

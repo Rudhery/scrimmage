@@ -16,6 +16,7 @@ const proposeSchema = z.object({
   awayTeamId: z.string().min(1),
   scheduledAt: z.date(),
   proposedBy: z.string().min(1),
+  channelId: z.string().optional(),
 });
 
 export type ProposeScrimmageInput = z.infer<typeof proposeSchema>;
@@ -73,6 +74,8 @@ export class ScrimmageService {
       status: ScrimmageStatus.Proposed,
       result: null,
       proposedBy: data.proposedBy,
+      channelId: data.channelId ?? null,
+      reminderSentAt: null,
       createdAt: this.runtime.now(),
     };
     const created = await this.scrimmages.create(scrimmage);
@@ -141,5 +144,29 @@ export class ScrimmageService {
     });
     this.runtime.events.emit('scrimmage.played', { scrimmage: played });
     return played;
+  }
+
+  /**
+   * Mark every confirmed scrimmage whose kickoff is within `withinMs` as reminded
+   * and emit `scrimmage.reminderDue` for the upcoming ones. Designed to be polled
+   * (e.g. once a minute) so it survives restarts — it reads state from storage
+   * each time rather than relying on in-memory timers.
+   */
+  async processDueReminders(withinMs: number): Promise<Scrimmage[]> {
+    const now = this.runtime.now();
+    const before = new Date(now.getTime() + withinMs);
+    const due = await this.scrimmages.listDueReminders(before);
+
+    const reminded: Scrimmage[] = [];
+    for (const scrimmage of due) {
+      // Mark all fetched rows so past-kickoff ones stop being re-queried, but only
+      // announce the ones that have not kicked off yet.
+      const updated = await this.scrimmages.update({ ...scrimmage, reminderSentAt: now });
+      if (scrimmage.scheduledAt.getTime() > now.getTime()) {
+        this.runtime.events.emit('scrimmage.reminderDue', { scrimmage: updated });
+        reminded.push(updated);
+      }
+    }
+    return reminded;
   }
 }

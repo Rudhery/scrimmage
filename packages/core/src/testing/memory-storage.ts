@@ -115,6 +115,15 @@ class MemoryScrimmageRepository implements ScrimmageRepository {
     this.scrimmages.set(scrimmage.id, scrimmage);
     return scrimmage;
   }
+
+  async listDueReminders(before: Date): Promise<Scrimmage[]> {
+    return [...this.scrimmages.values()].filter(
+      (s) =>
+        s.status === 'confirmed' &&
+        s.reminderSentAt === null &&
+        s.scheduledAt.getTime() <= before.getTime(),
+    );
+  }
 }
 
 /** Create a fresh, empty in-memory {@link Storage}. */

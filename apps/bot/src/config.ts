@@ -6,6 +6,8 @@ const envSchema = z.object({
   DISCORD_GUILD_ID: z.string().optional(),
   DATABASE_PATH: z.string().min(1).default('./scrimmage.sqlite'),
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
+  REMINDER_LEAD_MINUTES: z.coerce.number().int().min(1).max(1440).default(15),
+  REMINDER_POLL_SECONDS: z.coerce.number().int().min(15).max(3600).default(60),
 });
 
 export interface Config {
@@ -14,6 +16,10 @@ export interface Config {
   readonly discordGuildId?: string;
   readonly databasePath: string;
   readonly logLevel: z.infer<typeof envSchema>['LOG_LEVEL'];
+  /** How long before kickoff to send the reminder, in milliseconds. */
+  readonly reminderLeadMs: number;
+  /** How often the reminder loop checks for due scrimmages, in milliseconds. */
+  readonly reminderPollMs: number;
 }
 
 /**
@@ -36,5 +42,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     discordGuildId: env_.DISCORD_GUILD_ID,
     databasePath: env_.DATABASE_PATH,
     logLevel: env_.LOG_LEVEL,
+    reminderLeadMs: env_.REMINDER_LEAD_MINUTES * 60_000,
+    reminderPollMs: env_.REMINDER_POLL_SECONDS * 1000,
   };
 }

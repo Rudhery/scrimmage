@@ -119,4 +119,35 @@ describe('ScrimmageService', () => {
     await scrims.recordResult(GUILD, proposed.id, { homeScore: 0, awayScore: 0 });
     await expect(scrims.cancel(GUILD, proposed.id)).rejects.toBeInstanceOf(InvalidStateError);
   });
+
+  it('reminds confirmed scrimmages within the window exactly once', async () => {
+    const soon = new Date(NOW.getTime() + 10 * 60_000);
+    const scrim = await scrims.propose({
+      guildId: GUILD,
+      homeTeamId: homeId,
+      awayTeamId: awayId,
+      scheduledAt: soon,
+      proposedBy: 'a',
+    });
+    await scrims.confirm(GUILD, scrim.id);
+
+    const reminded = await scrims.processDueReminders(15 * 60_000);
+    expect(reminded.map((s) => s.id)).toEqual([scrim.id]);
+
+    // A second pass finds nothing — the reminder was already marked sent.
+    expect(await scrims.processDueReminders(15 * 60_000)).toHaveLength(0);
+  });
+
+  it('does not remind proposed (unconfirmed) scrimmages', async () => {
+    const soon = new Date(NOW.getTime() + 10 * 60_000);
+    await scrims.propose({
+      guildId: GUILD,
+      homeTeamId: homeId,
+      awayTeamId: awayId,
+      scheduledAt: soon,
+      proposedBy: 'a',
+    });
+
+    expect(await scrims.processDueReminders(15 * 60_000)).toHaveLength(0);
+  });
 });

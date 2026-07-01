@@ -19,6 +19,7 @@ export interface ScrimmageEvents {
   'scrimmage.confirmed': { scrimmage: Scrimmage };
   'scrimmage.cancelled': { scrimmage: Scrimmage };
   'scrimmage.played': { scrimmage: Scrimmage };
+  'scrimmage.reminderDue': { scrimmage: Scrimmage };
 }
 
 export type EventName = keyof ScrimmageEvents;
