@@ -12,6 +12,7 @@ import { TeamRole } from '@scrimmage/core';
 import type { AppContext } from '../context.js';
 import type { Command } from '../lib/command.js';
 import { ROLE_LABEL, teamEmbed, teamListEmbed } from '../lib/format.js';
+import { paginate, paginationRow, type PagedView } from '../lib/pagination.js';
 import { canManageTeam, requireGuildId } from '../lib/interaction.js';
 import { respondTeamNames } from '../lib/autocomplete.js';
 
@@ -284,8 +285,25 @@ async function listTeams(
   context: AppContext,
   guildId: string,
 ): Promise<void> {
-  const teams = await context.teams.listTeams(guildId);
-  await interaction.reply({ embeds: [teamListEmbed(teams)] });
+  await interaction.reply(await renderTeamList(context, guildId, 0));
+}
+
+/** Render one page of the team list — shared by the command and pagination buttons. */
+export async function renderTeamList(
+  context: AppContext,
+  guildId: string,
+  page: number,
+): Promise<PagedView> {
+  const {
+    items,
+    page: current,
+    pageCount,
+  } = paginate(await context.teams.listTeams(guildId), page);
+  const row = paginationRow('page:team', current, pageCount);
+  return {
+    embeds: [teamListEmbed(items, current, pageCount)],
+    components: row ? [row] : [],
+  };
 }
 
 async function teamInfo(

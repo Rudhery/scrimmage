@@ -13,6 +13,7 @@ import type { AppContext } from '../context.js';
 import type { Command } from '../lib/command.js';
 import { parseSchedule } from '../lib/time.js';
 import { scrimmageEmbed, scrimmageLine, scrimmageListEmbed } from '../lib/format.js';
+import { paginate, paginationRow, type PagedView } from '../lib/pagination.js';
 import { requireGuildId } from '../lib/interaction.js';
 import { respondScrimmageIds, respondTeamNames } from '../lib/autocomplete.js';
 
@@ -267,15 +268,30 @@ async function list(
   guildId: string,
 ): Promise<void> {
   const status = interaction.options.getString('status') as ScrimmageStatus | null;
-  const scrims = await context.scrimmages.list(guildId, status ? { status } : undefined);
+  await interaction.reply(await renderScrimList(context, guildId, status, 0));
+}
+
+/** Render one page of the scrimmage list — shared by the command and pagination buttons. */
+export async function renderScrimList(
+  context: AppContext,
+  guildId: string,
+  status: ScrimmageStatus | null,
+  page: number,
+): Promise<PagedView> {
+  const all = await context.scrimmages.list(guildId, status ? { status } : undefined);
+  const { items, page: current, pageCount } = paginate(all, page);
 
   const teams = await context.teams.listTeams(guildId);
   const byId = new Map(teams.map((team) => [team.id, team]));
-  const lines = scrims.map((scrim) =>
+  const lines = items.map((scrim) =>
     scrimmageLine(scrim, byId.get(scrim.homeTeamId) ?? null, byId.get(scrim.awayTeamId) ?? null),
   );
 
-  await interaction.reply({ embeds: [scrimmageListEmbed(lines, status)] });
+  const row = paginationRow(`page:scrim:${status ?? 'all'}`, current, pageCount);
+  return {
+    embeds: [scrimmageListEmbed(lines, status, current, pageCount)],
+    components: row ? [row] : [],
+  };
 }
 
 type ScrimAction = 'confirm' | 'cancel';

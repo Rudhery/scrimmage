@@ -64,13 +64,16 @@ export function teamEmbed(team: Team, roster: TeamMember[]): EmbedBuilder {
   return embed;
 }
 
-export function teamListEmbed(teams: Team[]): EmbedBuilder {
+export function teamListEmbed(teams: Team[], page: number, pageCount: number): EmbedBuilder {
   const embed = new EmbedBuilder().setTitle('Teams').setColor(BRAND_COLOR);
   embed.setDescription(
     teams.length
       ? teams.map((team) => `**${team.name}** \`[${team.tag}]\``).join('\n')
       : 'No teams yet. Create one with `/team create`.',
   );
+  if (pageCount > 1) {
+    embed.setFooter({ text: `Page ${page + 1}/${pageCount}` });
+  }
   return embed;
 }
 
@@ -114,9 +117,18 @@ export function scrimmageLine(scrim: Scrimmage, home: Team | null, away: Team | 
   ].join('\n');
 }
 
-export function scrimmageListEmbed(lines: string[], status: ScrimmageStatus | null): EmbedBuilder {
-  return new EmbedBuilder()
+export function scrimmageListEmbed(
+  lines: string[],
+  status: ScrimmageStatus | null,
+  page: number,
+  pageCount: number,
+): EmbedBuilder {
+  const embed = new EmbedBuilder()
     .setTitle(status ? `Scrimmages — ${STATUS_LABEL[status]}` : 'Scrimmages')
     .setColor(BRAND_COLOR)
     .setDescription(lines.length ? lines.join('\n\n') : 'No scrimmages found.');
+  if (pageCount > 1) {
+    embed.setFooter({ text: `Page ${page + 1}/${pageCount}` });
+  }
+  return embed;
 }

@@ -5,6 +5,7 @@ import type { Command } from '../lib/command.js';
 import { toUserMessage } from '../lib/errors.js';
 import { handleScrimButton, isScrimButton } from '../commands/scrim.js';
 import { handleTeamModal, isTeamModal } from '../commands/team.js';
+import { handlePaginationButton, isPaginationButton } from './pagination.js';
 
 /** Route an incoming interaction to its command and report failures gracefully. */
 export async function handleInteraction(
@@ -26,11 +27,12 @@ export async function handleInteraction(
   }
 
   if (interaction.isButton()) {
-    if (!isScrimButton(interaction.customId)) {
-      return;
-    }
     try {
-      await handleScrimButton(interaction, context);
+      if (isScrimButton(interaction.customId)) {
+        await handleScrimButton(interaction, context);
+      } else if (isPaginationButton(interaction.customId)) {
+        await handlePaginationButton(interaction, context);
+      }
     } catch (error) {
       context.logger.error({ err: error, customId: interaction.customId }, 'button failed');
       const content = toUserMessage(error);

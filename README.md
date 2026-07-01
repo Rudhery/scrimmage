@@ -127,7 +127,8 @@ For Docker and production deployment, see the [deployment guide](./docs/DEPLOYME
 
 Teams have a **captain**, **coaches**, **assistants**, **players** and an optional **crest/logo**.
 `/team create` opens a **modal form**, team and scrimmage options offer **autocomplete**, and a
-freshly proposed scrimmage comes with **Confirm / Cancel buttons** so captains can act in one click.
+freshly proposed scrimmage comes with **Confirm / Cancel buttons** so captains can act in one click. Long lists paginate with
+**Prev / Next buttons**.
 Renaming, deleting, role, logo and roster changes require the team captain or a member with the
 **Manage Server** permission.
 
