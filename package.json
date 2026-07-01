@@ -40,6 +40,7 @@
     "start": "tsx apps/bot/src/index.ts",
     "dev:api": "tsx watch apps/api/src/index.ts",
     "start:api": "tsx apps/api/src/index.ts",
+    "dev:web": "npm run dev --workspace @scrimmage/web",
     "register": "tsx apps/bot/src/register-commands.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

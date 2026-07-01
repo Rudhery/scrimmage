@@ -34,23 +34,30 @@ possible front-ends.
 - **Reusable core** — the domain and business rules ship as a standalone, framework-agnostic SDK.
 - **Typed domain events** — subscribe to team and scrimmage changes from the SDK; the bot's own
   notifications are just listeners.
+- **Web dashboard** — a React dashboard (teams, scrimmages, live standings) served by a Hono API
+  that reuses the same core — proof the SDK is genuinely front-end agnostic.
 
 ## 🧠 How it works
 
-Scrimmage is split into clear layers so each piece has a single responsibility:
+Scrimmage is split into clear layers so each piece has a single responsibility. Two independent
+front-ends — the Discord bot and the web dashboard's API — reuse the exact same core:
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  apps/bot            discord.js front-end (slash commands)    │
-│                      knows about Discord, not the database     │
-├─────────────────────────────────────────────────────────────┤
-│  @scrimmage/core     domain entities + services (the SDK)      │
-│                      knows about business rules, nothing else  │
-│                      defines storage *interfaces*              │
-├─────────────────────────────────────────────────────────────┤
-│  @scrimmage/storage-sqlite   Drizzle + SQLite implementation   │
-│                      implements the storage interfaces          │
-└─────────────────────────────────────────────────────────────┘
+┌────────────────────────────┐   ┌────────────────────────────┐
+│  apps/bot   (discord.js)    │   │  apps/web   (React + Vite)  │
+│  slash commands, buttons     │   │        ↓ fetch              │
+│                              │   │  apps/api   (Hono)          │
+└──────────────┬─────────────┘   └──────────────┬─────────────┘
+               │        both import              │
+               ▼                                 ▼
+        ┌──────────────────────────────────────────────┐
+        │  @scrimmage/core — domain + services (the SDK) │
+        │  business rules only; defines storage *interfaces*
+        └──────────────────────┬───────────────────────┘
+                               ▼
+        ┌──────────────────────────────────────────────┐
+        │  @scrimmage/storage-sqlite — Drizzle + SQLite  │
+        └──────────────────────────────────────────────┘
 ```
 
 The **core never imports Discord or SQLite**. It only depends on interfaces it defines itself
@@ -166,12 +173,28 @@ const redDragons = await teams.createTeam({
 });
 ```
 
+## 🖥️ Web dashboard
+
+A read-only React dashboard shows a server's teams, scrimmages and live standings. It talks to a
+small Hono API that reuses `@scrimmage/core` — the same core the bot runs on. Run both alongside
+the bot:
+
+```bash
+npm run dev:api   # Hono API on http://localhost:3001 (reads the same SQLite file)
+npm run dev:web   # Vite dev server on http://localhost:5173
+```
+
+Open <http://localhost:5173>, enter your Discord **server ID**, and you'll see teams, scrimmages and
+the league table update as the bot is used. No auth yet — the guild is chosen from the URL.
+
 ## 🗂️ Project structure
 
 ```
 scrimmage/
 ├── apps/
-│   └── bot/                  # @scrimmage/bot — the Discord application (discord.js)
+│   ├── bot/                  # @scrimmage/bot — the Discord application (discord.js)
+│   ├── api/                  # @scrimmage/api — read-only Hono API over the core
+│   └── web/                  # @scrimmage/web — React + Vite + Tailwind dashboard
 ├── packages/
 │   ├── core/                 # @scrimmage/core — domain, services, storage interfaces (the SDK)
 │   └── storage-sqlite/       # @scrimmage/storage-sqlite — Drizzle + SQLite adapter

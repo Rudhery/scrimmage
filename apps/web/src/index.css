@@ -1,0 +1,63 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-ink: #0a0b0d;
+  --color-surface: #131519;
+  --color-surface2: #1a1d24;
+  --color-line: #262a32;
+  --color-fg: #f3f4f6;
+  --color-muted: #868c99;
+  --color-lime: #d3ff33;
+
+  --color-proposed: #f5c518;
+  --color-confirmed: #35d07f;
+  --color-cancelled: #ff5a5f;
+  --color-played: #4aa3ff;
+
+  --font-display: 'Anton', 'Archivo', sans-serif;
+  --font-sans: 'Archivo', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-ink text-fg font-sans antialiased;
+    background-image:
+      radial-gradient(55rem 55rem at 88% -12%, rgba(211, 255, 51, 0.09), transparent 62%),
+      radial-gradient(46rem 46rem at -12% 112%, rgba(74, 163, 255, 0.07), transparent 60%);
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+
+  /* Faint stadium-grid texture. */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background-image:
+      linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(circle at 50% 0%, black, transparent 85%);
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@utility rise {
+  animation: rise 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}

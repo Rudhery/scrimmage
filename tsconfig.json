@@ -10,5 +10,5 @@
     }
   },
   "include": ["packages/*/src/**/*", "apps/*/src/**/*", "scripts/**/*", "*.config.ts"],
-  "exclude": ["**/dist/**", "**/node_modules/**"]
+  "exclude": ["**/dist/**", "**/node_modules/**", "apps/web"]
 }
