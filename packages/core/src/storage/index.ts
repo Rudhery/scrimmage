@@ -3,5 +3,7 @@ export type {
   ScrimmageRepository,
   ScrimmageFilter,
   GuildSettingsRepository,
+  StatCategoryRepository,
+  PlayerStatsRepository,
   Storage,
 } from './repositories.js';

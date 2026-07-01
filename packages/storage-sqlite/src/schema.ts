@@ -2,6 +2,7 @@ import {
   index,
   integer,
   primaryKey,
+  real,
   sqliteTable,
   text,
   uniqueIndex,
@@ -64,3 +65,32 @@ export const guildSettings = sqliteTable('guild_settings', {
   guildId: text('guild_id').primaryKey(),
   announceChannelId: text('announce_channel_id'),
 });
+
+export const statCategories = sqliteTable(
+  'stat_categories',
+  {
+    guildId: text('guild_id').notNull(),
+    key: text('key').notNull(),
+    label: text('label').notNull(),
+    weight: real('weight').notNull(),
+    position: integer('position').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.guildId, table.key] })],
+);
+
+export const playerStats = sqliteTable(
+  'player_stats',
+  {
+    scrimmageId: text('scrimmage_id')
+      .notNull()
+      .references(() => scrimmages.id, { onDelete: 'cascade' }),
+    guildId: text('guild_id').notNull(),
+    teamId: text('team_id').notNull(),
+    userId: text('user_id').notNull(),
+    values: text('values').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.scrimmageId, table.userId] }),
+    index('player_stats_guild_idx').on(table.guildId),
+  ],
+);

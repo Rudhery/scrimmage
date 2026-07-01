@@ -1,6 +1,7 @@
 import type { Team, TeamMember, TeamRole } from '../domain/team.js';
 import type { Scrimmage, ScrimmageStatus } from '../domain/scrimmage.js';
 import type { GuildSettings } from '../domain/guild-settings.js';
+import type { PlayerStatLine, StatCategory } from '../domain/stats.js';
 
 /**
  * Persistence boundary for teams and their rosters.
@@ -49,6 +50,20 @@ export interface GuildSettingsRepository {
   upsert(settings: GuildSettings): Promise<GuildSettings>;
 }
 
+/** Persistence boundary for per-guild stat category configuration. */
+export interface StatCategoryRepository {
+  list(guildId: string): Promise<StatCategory[]>;
+  upsert(category: StatCategory): Promise<void>;
+  remove(guildId: string, key: string): Promise<void>;
+}
+
+/** Persistence boundary for per-player, per-scrimmage stat lines. */
+export interface PlayerStatsRepository {
+  set(line: PlayerStatLine): Promise<void>;
+  listByScrimmage(scrimmageId: string): Promise<PlayerStatLine[]>;
+  listByGuild(guildId: string): Promise<PlayerStatLine[]>;
+}
+
 /**
  * A storage backend bundles the repositories the application needs and owns the
  * lifecycle of the underlying connection.
@@ -57,6 +72,8 @@ export interface Storage {
   readonly teams: TeamRepository;
   readonly scrimmages: ScrimmageRepository;
   readonly guildSettings: GuildSettingsRepository;
+  readonly statCategories: StatCategoryRepository;
+  readonly playerStats: PlayerStatsRepository;
   /** Release any underlying resources (connections, file handles, …). */
   close(): Promise<void> | void;
 }
