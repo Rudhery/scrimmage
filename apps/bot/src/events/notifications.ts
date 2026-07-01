@@ -10,7 +10,7 @@ import { ROLE_LABEL, scrimmageEmbed } from '../lib/format.js';
  * services themselves stay completely Discord-agnostic.
  */
 export function registerNotifications(context: AppContext): void {
-  const { events, client, logger, storage } = context;
+  const { events, client, logger, storage, guildSettings } = context;
 
   const captainsOf = (home: Team | null, away: Team | null): string[] =>
     [home?.captainId, away?.captainId].filter((id): id is string => id !== undefined);
@@ -50,10 +50,12 @@ export function registerNotifications(context: AppContext): void {
     const embed = scrimmageEmbed(scrimmage, home, away);
     const kickoff = time(scrimmage.scheduledAt, TimestampStyles.RelativeTime);
 
-    // Announce in the channel it was proposed in, if we still can.
-    if (scrimmage.channelId) {
+    // Announce in the configured channel, falling back to the one it was proposed in.
+    const settings = await guildSettings.get(scrimmage.guildId);
+    const targetChannelId = settings.announceChannelId ?? scrimmage.channelId;
+    if (targetChannelId) {
       try {
-        const channel = await client.channels.fetch(scrimmage.channelId);
+        const channel = await client.channels.fetch(targetChannelId);
         if (channel && channel.isTextBased() && !channel.isDMBased()) {
           const mentions = captains.map((id) => `<@${id}>`).join(' ');
           await channel.send({
@@ -62,7 +64,7 @@ export function registerNotifications(context: AppContext): void {
           });
         }
       } catch (error) {
-        logger.debug({ err: error, channelId: scrimmage.channelId }, 'could not post reminder');
+        logger.debug({ err: error, channelId: targetChannelId }, 'could not post reminder');
       }
     }
 

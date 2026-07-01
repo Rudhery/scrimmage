@@ -3,3 +3,4 @@ export type { CreateTeamInput } from './team-service.js';
 export { ScrimmageService } from './scrimmage-service.js';
 export type { ProposeScrimmageInput, RecordResultInput } from './scrimmage-service.js';
 export { StandingsService, buildStandings, emptyStanding } from './standings-service.js';
+export { GuildSettingsService } from './guild-settings-service.js';

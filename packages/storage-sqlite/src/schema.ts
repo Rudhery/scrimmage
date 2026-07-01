@@ -59,3 +59,8 @@ export const scrimmages = sqliteTable(
     index('scrimmages_status_idx').on(table.status),
   ],
 );
+
+export const guildSettings = sqliteTable('guild_settings', {
+  guildId: text('guild_id').primaryKey(),
+  announceChannelId: text('announce_channel_id'),
+});

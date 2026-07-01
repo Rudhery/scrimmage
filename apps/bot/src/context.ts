@@ -1,4 +1,5 @@
 import {
+  GuildSettingsService,
   ScrimmageService,
   StandingsService,
   TeamService,
@@ -24,6 +25,7 @@ export interface AppContext {
   readonly teams: TeamService;
   readonly scrimmages: ScrimmageService;
   readonly standings: StandingsService;
+  readonly guildSettings: GuildSettingsService;
 }
 
 /** Wire up storage, the domain event bus and services from configuration. */
@@ -41,5 +43,6 @@ export function createContext(config: Config, logger: Logger, client: Client): A
     teams: new TeamService(storage.teams, { events }),
     scrimmages: new ScrimmageService(storage.scrimmages, storage.teams, { events }),
     standings: new StandingsService(storage.scrimmages),
+    guildSettings: new GuildSettingsService(storage.guildSettings),
   };
 }

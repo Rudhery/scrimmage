@@ -1,6 +1,8 @@
 import type { Team, TeamMember, TeamRole } from '../domain/team.js';
 import type { Scrimmage } from '../domain/scrimmage.js';
+import type { GuildSettings } from '../domain/guild-settings.js';
 import type {
+  GuildSettingsRepository,
   ScrimmageFilter,
   ScrimmageRepository,
   Storage,
@@ -126,11 +128,25 @@ class MemoryScrimmageRepository implements ScrimmageRepository {
   }
 }
 
+class MemoryGuildSettingsRepository implements GuildSettingsRepository {
+  private readonly settings = new Map<string, GuildSettings>();
+
+  async get(guildId: string): Promise<GuildSettings | null> {
+    return this.settings.get(guildId) ?? null;
+  }
+
+  async upsert(settings: GuildSettings): Promise<GuildSettings> {
+    this.settings.set(settings.guildId, settings);
+    return settings;
+  }
+}
+
 /** Create a fresh, empty in-memory {@link Storage}. */
 export function createMemoryStorage(): Storage {
   return {
     teams: new MemoryTeamRepository(),
     scrimmages: new MemoryScrimmageRepository(),
+    guildSettings: new MemoryGuildSettingsRepository(),
     close() {
       /* nothing to release */
     },

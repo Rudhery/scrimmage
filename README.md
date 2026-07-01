@@ -26,7 +26,7 @@ possible front-ends.
 - **Teams** — create, delete, list and inspect teams, each scoped to a Discord server.
 - **Rosters** — add and remove members, assign a captain.
 - **Scrimmages** — propose a match between two teams, confirm it, cancel it, and record the result.
-- **Pre-game reminders** — the bot pings both teams before kickoff, in the channel and via DM.
+- **Pre-game reminders** — the bot pings both teams before kickoff, in a configurable channel and via DM.
 - **Standings & stats** — a league table (W/D/L, goal difference, points) from recorded results.
 - **Server-scoped** — every team and match belongs to the guild it was created in.
 - **Pluggable storage** — the default is SQLite via Drizzle ORM; the storage layer is an interface,
@@ -127,6 +127,8 @@ For Docker and production deployment, see the [deployment guide](./docs/DEPLOYME
 | `/scrim list [status]`                | List scrimmages, optionally filtered.        |
 | `/scrim result <id> <home> <away>`    | Record the final score of a confirmed match. |
 | `/standings`                          | Show the server league table.                |
+| `/config view`                        | Show the server settings.                    |
+| `/config announce [channel]`          | Set/clear the announcement channel.          |
 
 Teams have a **captain**, **coaches**, **assistants**, **players** and an optional **crest/logo**.
 `/team create` opens a **modal form**, team and scrimmage options offer **autocomplete**, and a

@@ -28,5 +28,10 @@ export function canManageTeam(interaction: ChatInputCommandInteraction, team: Te
   if (interaction.user.id === team.captainId) {
     return true;
   }
+  return isServerManager(interaction);
+}
+
+/** Whether the invoking user has the Manage Server permission. */
+export function isServerManager(interaction: ChatInputCommandInteraction): boolean {
   return interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild) ?? false;
 }

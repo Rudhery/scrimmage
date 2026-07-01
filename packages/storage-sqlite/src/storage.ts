@@ -1,6 +1,7 @@
 import type { Storage } from '@scrimmage/core';
 import { createConnection } from './client.js';
 import { applyMigrations } from './migrator.js';
+import { DrizzleGuildSettingsRepository } from './repositories/guild-settings-repository.js';
 import { DrizzleScrimmageRepository } from './repositories/scrimmage-repository.js';
 import { DrizzleTeamRepository } from './repositories/team-repository.js';
 
@@ -24,6 +25,7 @@ export function createSqliteStorage(options: SqliteStorageOptions): Storage {
   return {
     teams: new DrizzleTeamRepository(db),
     scrimmages: new DrizzleScrimmageRepository(db),
+    guildSettings: new DrizzleGuildSettingsRepository(db),
     close() {
       sqlite.close();
     },
