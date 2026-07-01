@@ -39,6 +39,7 @@ export function createContext(config: Config, logger: Logger, client: Client): A
     onError: (error, event) => logger.error({ err: error, event }, 'event listener failed'),
   });
   const statCategories = new StatCategoryService(storage.statCategories);
+  const guildSettings = new GuildSettingsService(storage.guildSettings);
   return {
     config,
     logger,
@@ -47,8 +48,8 @@ export function createContext(config: Config, logger: Logger, client: Client): A
     storage,
     teams: new TeamService(storage.teams, { events }),
     scrimmages: new ScrimmageService(storage.scrimmages, storage.teams, { events }),
-    standings: new StandingsService(storage.scrimmages),
-    guildSettings: new GuildSettingsService(storage.guildSettings),
+    standings: new StandingsService(storage.scrimmages, guildSettings),
+    guildSettings,
     statCategories,
     playerStats: new PlayerStatsService(storage.playerStats, statCategories),
   };

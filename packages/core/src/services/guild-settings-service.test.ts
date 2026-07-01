@@ -9,7 +9,22 @@ describe('GuildSettingsService', () => {
       guildId: 'g',
       announceChannelId: null,
       language: null,
+      points: { win: 3, draw: 1, loss: 0 },
+      adminRoleId: null,
+      reminderLeadMinutes: null,
     });
+  });
+
+  it('sets points, admin role and reminder lead independently', async () => {
+    const service = new GuildSettingsService(createMemoryStorage().guildSettings);
+
+    await service.setPoints('g', 2, 1, 0);
+    await service.setAdminRole('g', 'role-1');
+    const settings = await service.setReminderLead('g', 30);
+
+    expect(settings.points).toEqual({ win: 2, draw: 1, loss: 0 });
+    expect(settings.adminRoleId).toBe('role-1');
+    expect(settings.reminderLeadMinutes).toBe(30);
   });
 
   it('sets and clears the announce channel', async () => {

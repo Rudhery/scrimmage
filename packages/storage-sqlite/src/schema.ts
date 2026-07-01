@@ -66,6 +66,11 @@ export const guildSettings = sqliteTable('guild_settings', {
   guildId: text('guild_id').primaryKey(),
   announceChannelId: text('announce_channel_id'),
   language: text('language'),
+  pointsWin: integer('points_win').notNull().default(3),
+  pointsDraw: integer('points_draw').notNull().default(1),
+  pointsLoss: integer('points_loss').notNull().default(0),
+  adminRoleId: text('admin_role_id'),
+  reminderLeadMinutes: integer('reminder_lead_minutes'),
 });
 
 export const statCategories = sqliteTable(

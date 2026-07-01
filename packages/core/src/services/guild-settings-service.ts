@@ -1,9 +1,21 @@
+import { z } from 'zod';
 import type { GuildSettings } from '../domain/guild-settings.js';
 import type { GuildSettingsRepository } from '../storage/repositories.js';
+import { parse } from '../validation.js';
 
 function defaults(guildId: string): GuildSettings {
-  return { guildId, announceChannelId: null, language: null };
+  return {
+    guildId,
+    announceChannelId: null,
+    language: null,
+    points: { win: 3, draw: 1, loss: 0 },
+    adminRoleId: null,
+    reminderLeadMinutes: null,
+  };
 }
+
+const pointSchema = z.number().int().min(0).max(100);
+const leadSchema = z.number().int().min(1).max(1440);
 
 /** Reads and updates per-guild settings, returning sensible defaults when unset. */
 export class GuildSettingsService {
@@ -24,5 +36,34 @@ export class GuildSettingsService {
   async setLanguage(guildId: string, language: string | null): Promise<GuildSettings> {
     const current = await this.get(guildId);
     return this.settings.upsert({ ...current, language });
+  }
+
+  /** Set the points awarded for win / draw / loss. */
+  async setPoints(
+    guildId: string,
+    win: number,
+    draw: number,
+    loss: number,
+  ): Promise<GuildSettings> {
+    const points = {
+      win: parse(pointSchema, win),
+      draw: parse(pointSchema, draw),
+      loss: parse(pointSchema, loss),
+    };
+    const current = await this.get(guildId);
+    return this.settings.upsert({ ...current, points });
+  }
+
+  /** Set or clear (with `null`) the scrim-admin role. */
+  async setAdminRole(guildId: string, roleId: string | null): Promise<GuildSettings> {
+    const current = await this.get(guildId);
+    return this.settings.upsert({ ...current, adminRoleId: roleId });
+  }
+
+  /** Set or clear (with `null`) the per-guild reminder lead time, in minutes. */
+  async setReminderLead(guildId: string, minutes: number | null): Promise<GuildSettings> {
+    const reminderLeadMinutes = minutes === null ? null : parse(leadSchema, minutes);
+    const current = await this.get(guildId);
+    return this.settings.upsert({ ...current, reminderLeadMinutes });
   }
 }

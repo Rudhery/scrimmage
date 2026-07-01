@@ -1,9 +1,10 @@
 import { ScrimmageStatus, type Scrimmage } from '../domain/scrimmage.js';
+import type { PointsConfig } from '../domain/guild-settings.js';
 import type { TeamStanding } from '../domain/standing.js';
 import type { ScrimmageRepository } from '../storage/repositories.js';
+import type { GuildSettingsService } from './guild-settings-service.js';
 
-const POINTS_WIN = 3;
-const POINTS_DRAW = 1;
+const DEFAULT_POINTS: PointsConfig = { win: 3, draw: 1, loss: 0 };
 
 interface Tally {
   teamId: string;
@@ -35,7 +36,10 @@ export function emptyStanding(teamId: string): TeamStanding {
  * it is trivial to test and reuse. Sorted by points, then goal difference, then
  * goals scored.
  */
-export function buildStandings(scrimmages: Scrimmage[]): TeamStanding[] {
+export function buildStandings(
+  scrimmages: Scrimmage[],
+  points: PointsConfig = DEFAULT_POINTS,
+): TeamStanding[] {
   const table = new Map<string, Tally>();
   const tally = (teamId: string): Tally => {
     let entry = table.get(teamId);
@@ -77,7 +81,7 @@ export function buildStandings(scrimmages: Scrimmage[]): TeamStanding[] {
     .map((entry) => ({
       ...entry,
       goalDifference: entry.goalsFor - entry.goalsAgainst,
-      points: entry.wins * POINTS_WIN + entry.draws * POINTS_DRAW,
+      points: entry.wins * points.win + entry.draws * points.draw + entry.losses * points.loss,
     }))
     .sort(
       (a, b) =>
@@ -90,12 +94,18 @@ export function buildStandings(scrimmages: Scrimmage[]): TeamStanding[] {
 
 /** Read model that turns played scrimmages into league standings. */
 export class StandingsService {
-  constructor(private readonly scrimmages: ScrimmageRepository) {}
+  constructor(
+    private readonly scrimmages: ScrimmageRepository,
+    private readonly settings?: GuildSettingsService,
+  ) {}
 
   /** The full table for a guild, best team first. */
   async forGuild(guildId: string): Promise<TeamStanding[]> {
-    const played = await this.scrimmages.list(guildId, { status: ScrimmageStatus.Played });
-    return buildStandings(played);
+    const [played, points] = await Promise.all([
+      this.scrimmages.list(guildId, { status: ScrimmageStatus.Played }),
+      this.settings ? this.settings.get(guildId).then((s) => s.points) : DEFAULT_POINTS,
+    ]);
+    return buildStandings(played, points);
   }
 
   /** One team's record (all zeros if it has not played). */

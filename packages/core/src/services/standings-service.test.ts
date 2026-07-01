@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { GuildSettingsService } from './guild-settings-service.js';
 import { ScrimmageService } from './scrimmage-service.js';
 import { StandingsService, buildStandings } from './standings-service.js';
 import { TeamService } from './team-service.js';
@@ -68,5 +69,16 @@ describe('standings', () => {
 
   it('buildStandings ignores unplayed scrimmages', () => {
     expect(buildStandings([])).toEqual([]);
+  });
+
+  it('uses the guild-configured points', async () => {
+    const settings = new GuildSettingsService(storage.guildSettings);
+    await settings.setPoints(GUILD, 2, 1, 0); // 2 points per win instead of 3
+    const configured = new StandingsService(storage.scrimmages, settings);
+
+    await play(alpha, bravo, 3, 0); // Alpha win → 2 pts
+
+    const table = await configured.forGuild(GUILD);
+    expect(table.find((row) => row.teamId === alpha)?.points).toBe(2);
   });
 });

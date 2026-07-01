@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { ChatInputCommandInteraction } from 'discord.js';
 import type { Team } from '@scrimmage/core';
+import type { AppContext } from '../context.js';
 import { canManageTeam, requireGuildId } from './interaction.js';
+
+function contextWithAdminRole(adminRoleId: string | null): AppContext {
+  return { guildSettings: { get: async () => ({ adminRoleId }) } } as unknown as AppContext;
+}
 
 describe('requireGuildId', () => {
   it('returns the guild id inside a guild', async () => {
@@ -20,29 +25,39 @@ describe('requireGuildId', () => {
 });
 
 describe('canManageTeam', () => {
-  const team = { captainId: 'cap' } as Team;
+  const team = { captainId: 'cap', guildId: 'g' } as Team;
 
-  it('allows the captain', () => {
+  it('allows the captain', async () => {
     const interaction = {
       user: { id: 'cap' },
       memberPermissions: null,
     } as unknown as ChatInputCommandInteraction;
-    expect(canManageTeam(interaction, team)).toBe(true);
+    expect(await canManageTeam(contextWithAdminRole(null), interaction, team)).toBe(true);
   });
 
-  it('allows members with Manage Server', () => {
+  it('allows members with Manage Server', async () => {
     const interaction = {
       user: { id: 'other' },
       memberPermissions: { has: () => true },
     } as unknown as ChatInputCommandInteraction;
-    expect(canManageTeam(interaction, team)).toBe(true);
+    expect(await canManageTeam(contextWithAdminRole(null), interaction, team)).toBe(true);
   });
 
-  it('denies everyone else', () => {
+  it('allows members holding the scrim-admin role', async () => {
     const interaction = {
       user: { id: 'other' },
       memberPermissions: { has: () => false },
+      member: { roles: ['admin-role'] },
     } as unknown as ChatInputCommandInteraction;
-    expect(canManageTeam(interaction, team)).toBe(false);
+    expect(await canManageTeam(contextWithAdminRole('admin-role'), interaction, team)).toBe(true);
+  });
+
+  it('denies everyone else', async () => {
+    const interaction = {
+      user: { id: 'other' },
+      memberPermissions: { has: () => false },
+      member: { roles: [] },
+    } as unknown as ChatInputCommandInteraction;
+    expect(await canManageTeam(contextWithAdminRole(null), interaction, team)).toBe(false);
   });
 });

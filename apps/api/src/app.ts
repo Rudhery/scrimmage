@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { getCookie } from 'hono/cookie';
 import {
+  GuildSettingsService,
   ScrimmageService,
   StandingsService,
   TeamService,
@@ -34,7 +35,10 @@ function teamRef(team: Team | undefined): { id: string; name: string; tag: strin
 export function createApp(storage: Storage, options: AppOptions): Hono {
   const teams = new TeamService(storage.teams);
   const scrimmages = new ScrimmageService(storage.scrimmages, storage.teams);
-  const standings = new StandingsService(storage.scrimmages);
+  const standings = new StandingsService(
+    storage.scrimmages,
+    new GuildSettingsService(storage.guildSettings),
+  );
 
   const oauth = options.oauth ?? null;
   const sessions = options.sessions ?? new SessionStore();

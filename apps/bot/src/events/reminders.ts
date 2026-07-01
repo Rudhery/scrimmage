@@ -10,12 +10,21 @@ import type { AppContext } from '../context.js';
  *
  * @returns a function that stops the loop.
  */
+const WINDOW_MS = 24 * 60 * 60 * 1000;
+
 export function startReminderLoop(context: AppContext): () => void {
-  const { scrimmages, config, logger } = context;
+  const { scrimmages, guildSettings, config, logger } = context;
+
+  // Each guild may override the lead time; fall back to the bot default.
+  const resolveLeadMs = async (guildId: string): Promise<number> => {
+    const settings = await guildSettings.get(guildId);
+    const minutes = settings.reminderLeadMinutes ?? config.reminderLeadMs / 60_000;
+    return minutes * 60_000;
+  };
 
   const tick = (): void => {
     scrimmages
-      .processDueReminders(config.reminderLeadMs)
+      .processDueReminders(WINDOW_MS, resolveLeadMs)
       .catch((error: unknown) => logger.error({ err: error }, 'reminder loop failed'));
   };
 

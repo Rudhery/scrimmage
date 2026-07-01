@@ -26,6 +26,16 @@ const en = {
     "📢 Announcement channel cleared — reminders fall back to the scrimmage's channel.",
   'config.language.set': '🌍 Language set to {language}.',
   'config.language.cleared': '🌍 Language now follows each user.',
+  'config.pointsLabel': 'Points (W/D/L)',
+  'config.adminRoleLabel': 'Scrim admin role',
+  'config.reminderLabel': 'Reminder lead',
+  'config.reminderDefault': 'bot default',
+  'config.reminderMinutes': '{minutes} min',
+  'config.points.set': '🎯 Points set to {win}/{draw}/{loss} (win/draw/loss).',
+  'config.adminRole.set': '🛡️ Scrim admin role set to {role}.',
+  'config.adminRole.cleared': '🛡️ Scrim admin role cleared.',
+  'config.reminder.set': '⏰ Reminder lead set to {minutes} minutes.',
+  'config.reminder.cleared': '⏰ Reminder lead now uses the bot default.',
 } satisfies Record<string, string>;
 
 export type MessageKey = keyof typeof en;

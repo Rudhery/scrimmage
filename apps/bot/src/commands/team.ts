@@ -308,7 +308,7 @@ async function deleteTeam(
     guildId,
     interaction.options.getString('team', true),
   );
-  if (!canManageTeam(interaction, team)) {
+  if (!(await canManageTeam(context, interaction, team))) {
     await interaction.reply({ content: PERMISSION_DENIED, flags: MessageFlags.Ephemeral });
     return;
   }
@@ -377,7 +377,7 @@ async function renameTeam(
     guildId,
     interaction.options.getString('team', true),
   );
-  if (!canManageTeam(interaction, team)) {
+  if (!(await canManageTeam(context, interaction, team))) {
     await interaction.reply({ content: PERMISSION_DENIED, flags: MessageFlags.Ephemeral });
     return;
   }
@@ -399,7 +399,7 @@ async function transferCaptain(
     guildId,
     interaction.options.getString('team', true),
   );
-  if (!canManageTeam(interaction, team)) {
+  if (!(await canManageTeam(context, interaction, team))) {
     await interaction.reply({ content: PERMISSION_DENIED, flags: MessageFlags.Ephemeral });
     return;
   }
@@ -421,7 +421,7 @@ async function setLogo(
     guildId,
     interaction.options.getString('team', true),
   );
-  if (!canManageTeam(interaction, team)) {
+  if (!(await canManageTeam(context, interaction, team))) {
     await interaction.reply({ content: PERMISSION_DENIED, flags: MessageFlags.Ephemeral });
     return;
   }
@@ -449,7 +449,7 @@ async function linkRole(
     guildId,
     interaction.options.getString('team', true),
   );
-  if (!canManageTeam(interaction, team)) {
+  if (!(await canManageTeam(context, interaction, team))) {
     await interaction.reply({ content: PERMISSION_DENIED, flags: MessageFlags.Ephemeral });
     return;
   }
@@ -471,7 +471,7 @@ async function unlinkRole(
     guildId,
     interaction.options.getString('team', true),
   );
-  if (!canManageTeam(interaction, team)) {
+  if (!(await canManageTeam(context, interaction, team))) {
     await interaction.reply({ content: PERMISSION_DENIED, flags: MessageFlags.Ephemeral });
     return;
   }
@@ -490,7 +490,7 @@ async function setRole(
     guildId,
     interaction.options.getString('team', true),
   );
-  if (!canManageTeam(interaction, team)) {
+  if (!(await canManageTeam(context, interaction, team))) {
     await interaction.reply({ content: PERMISSION_DENIED, flags: MessageFlags.Ephemeral });
     return;
   }
@@ -508,7 +508,7 @@ async function addMember(
     guildId,
     interaction.options.getString('team', true),
   );
-  if (!canManageTeam(interaction, team)) {
+  if (!(await canManageTeam(context, interaction, team))) {
     await interaction.reply({ content: PERMISSION_DENIED, flags: MessageFlags.Ephemeral });
     return;
   }
@@ -526,7 +526,7 @@ async function removeMember(
     guildId,
     interaction.options.getString('team', true),
   );
-  if (!canManageTeam(interaction, team)) {
+  if (!(await canManageTeam(context, interaction, team))) {
     await interaction.reply({ content: PERMISSION_DENIED, flags: MessageFlags.Ephemeral });
     return;
   }

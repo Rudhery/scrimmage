@@ -152,20 +152,29 @@ export class ScrimmageService {
    * (e.g. once a minute) so it survives restarts — it reads state from storage
    * each time rather than relying on in-memory timers.
    */
-  async processDueReminders(withinMs: number): Promise<Scrimmage[]> {
+  async processDueReminders(
+    windowMs: number,
+    resolveLeadMs: (guildId: string) => number | Promise<number> = () => windowMs,
+  ): Promise<Scrimmage[]> {
     const now = this.runtime.now();
-    const before = new Date(now.getTime() + withinMs);
-    const due = await this.scrimmages.listDueReminders(before);
+    const before = new Date(now.getTime() + windowMs);
+    const candidates = await this.scrimmages.listDueReminders(before);
 
     const reminded: Scrimmage[] = [];
-    for (const scrimmage of due) {
-      // Mark all fetched rows so past-kickoff ones stop being re-queried, but only
-      // announce the ones that have not kicked off yet.
-      const updated = await this.scrimmages.update({ ...scrimmage, reminderSentAt: now });
-      if (scrimmage.scheduledAt.getTime() > now.getTime()) {
+    for (const scrimmage of candidates) {
+      const msUntil = scrimmage.scheduledAt.getTime() - now.getTime();
+      if (msUntil <= 0) {
+        // Kickoff already passed — mark it so it stops being re-queried; don't announce.
+        await this.scrimmages.update({ ...scrimmage, reminderSentAt: now });
+        continue;
+      }
+      const lead = await resolveLeadMs(scrimmage.guildId);
+      if (msUntil <= lead) {
+        const updated = await this.scrimmages.update({ ...scrimmage, reminderSentAt: now });
         this.runtime.events.emit('scrimmage.reminderDue', { scrimmage: updated });
         reminded.push(updated);
       }
+      // else: not yet within its guild's lead — leave it for a later tick.
     }
     return reminded;
   }

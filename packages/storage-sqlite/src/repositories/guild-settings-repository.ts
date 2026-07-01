@@ -12,22 +12,44 @@ export class DrizzleGuildSettingsRepository implements GuildSettingsRepository {
       .from(guildSettings)
       .where(eq(guildSettings.guildId, guildId))
       .get();
-    return row
-      ? { guildId: row.guildId, announceChannelId: row.announceChannelId, language: row.language }
-      : null;
+    if (!row) {
+      return null;
+    }
+    return {
+      guildId: row.guildId,
+      announceChannelId: row.announceChannelId,
+      language: row.language,
+      points: { win: row.pointsWin, draw: row.pointsDraw, loss: row.pointsLoss },
+      adminRoleId: row.adminRoleId,
+      reminderLeadMinutes: row.reminderLeadMinutes,
+    };
   }
 
   async upsert(settings: GuildSettings): Promise<GuildSettings> {
+    const values = {
+      guildId: settings.guildId,
+      announceChannelId: settings.announceChannelId,
+      language: settings.language,
+      pointsWin: settings.points.win,
+      pointsDraw: settings.points.draw,
+      pointsLoss: settings.points.loss,
+      adminRoleId: settings.adminRoleId,
+      reminderLeadMinutes: settings.reminderLeadMinutes,
+    };
     this.db
       .insert(guildSettings)
-      .values({
-        guildId: settings.guildId,
-        announceChannelId: settings.announceChannelId,
-        language: settings.language,
-      })
+      .values(values)
       .onConflictDoUpdate({
         target: guildSettings.guildId,
-        set: { announceChannelId: settings.announceChannelId, language: settings.language },
+        set: {
+          announceChannelId: values.announceChannelId,
+          language: values.language,
+          pointsWin: values.pointsWin,
+          pointsDraw: values.pointsDraw,
+          pointsLoss: values.pointsLoss,
+          adminRoleId: values.adminRoleId,
+          reminderLeadMinutes: values.reminderLeadMinutes,
+        },
       })
       .run();
     return settings;
