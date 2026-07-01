@@ -8,3 +8,4 @@ export { StatCategoryService } from './stat-category-service.js';
 export { PlayerStatsService } from './player-stats-service.js';
 export type { RecordStatsInput, SetStatInput, AggregateFilter } from './player-stats-service.js';
 export { RsvpService } from './rsvp-service.js';
+export { PollService } from './poll-service.js';

@@ -5,6 +5,7 @@ import { scrimCommand } from './scrim.js';
 import { standingsCommand } from './standings.js';
 import { configCommand } from './config.js';
 import { statsCommand } from './stats.js';
+import { pollCommand } from './poll.js';
 
 /** Every command the bot exposes. */
 export const commandList: readonly Command[] = [
@@ -13,6 +14,7 @@ export const commandList: readonly Command[] = [
   standingsCommand,
   configCommand,
   statsCommand,
+  pollCommand,
 ];
 
 /** Commands indexed by name for fast lookup during interaction handling. */

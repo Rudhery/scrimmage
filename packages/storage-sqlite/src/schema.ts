@@ -115,3 +115,24 @@ export const rsvps = sqliteTable(
   },
   (table) => [primaryKey({ columns: [table.scrimmageId, table.userId] })],
 );
+
+export const polls = sqliteTable('polls', {
+  id: text('id').primaryKey(),
+  guildId: text('guild_id').notNull(),
+  title: text('title').notNull(),
+  slots: text('slots').notNull(),
+  createdBy: text('created_by').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+});
+
+export const pollVotes = sqliteTable(
+  'poll_votes',
+  {
+    pollId: text('poll_id')
+      .notNull()
+      .references(() => polls.id, { onDelete: 'cascade' }),
+    slotIndex: integer('slot_index').notNull(),
+    userId: text('user_id').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.pollId, table.slotIndex, table.userId] })],
+);

@@ -9,6 +9,7 @@ import {
   isRsvpButton,
   isScrimButton,
 } from '../commands/scrim.js';
+import { handlePollButton, isPollButton } from '../commands/poll.js';
 import { handleTeamModal, isTeamModal } from '../commands/team.js';
 import { handlePaginationButton, isPaginationButton } from './pagination.js';
 
@@ -37,6 +38,8 @@ export async function handleInteraction(
         await handleScrimButton(interaction, context);
       } else if (isRsvpButton(interaction.customId)) {
         await handleRsvpButton(interaction, context);
+      } else if (isPollButton(interaction.customId)) {
+        await handlePollButton(interaction, context);
       } else if (isPaginationButton(interaction.customId)) {
         await handlePaginationButton(interaction, context);
       }

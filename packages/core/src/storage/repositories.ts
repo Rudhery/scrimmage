@@ -3,6 +3,7 @@ import type { Scrimmage, ScrimmageStatus } from '../domain/scrimmage.js';
 import type { GuildSettings } from '../domain/guild-settings.js';
 import type { PlayerStatLine, StatCategory } from '../domain/stats.js';
 import type { Rsvp } from '../domain/rsvp.js';
+import type { AvailabilityPoll, PollVote } from '../domain/poll.js';
 
 /**
  * Persistence boundary for teams and their rosters.
@@ -71,6 +72,15 @@ export interface RsvpRepository {
   listByScrimmage(scrimmageId: string): Promise<Rsvp[]>;
 }
 
+/** Persistence boundary for availability polls and their votes. */
+export interface PollRepository {
+  create(poll: AvailabilityPoll): Promise<AvailabilityPoll>;
+  findById(id: string): Promise<AvailabilityPoll | null>;
+  addVote(vote: PollVote): Promise<void>;
+  removeVote(vote: PollVote): Promise<void>;
+  listVotes(pollId: string): Promise<PollVote[]>;
+}
+
 /**
  * A storage backend bundles the repositories the application needs and owns the
  * lifecycle of the underlying connection.
@@ -82,6 +92,7 @@ export interface Storage {
   readonly statCategories: StatCategoryRepository;
   readonly playerStats: PlayerStatsRepository;
   readonly rsvps: RsvpRepository;
+  readonly polls: PollRepository;
   /** Release any underlying resources (connections, file handles, …). */
   close(): Promise<void> | void;
 }

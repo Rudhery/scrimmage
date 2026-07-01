@@ -6,5 +6,6 @@ export type {
   StatCategoryRepository,
   PlayerStatsRepository,
   RsvpRepository,
+  PollRepository,
   Storage,
 } from './repositories.js';

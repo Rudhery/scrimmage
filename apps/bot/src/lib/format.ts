@@ -3,8 +3,10 @@ import {
   RsvpStatus,
   ScrimmageStatus,
   TeamRole,
+  type AvailabilityPoll,
   type PlayerAggregate,
   type PlayerStatLine,
+  type PollVote,
   type Rsvp,
   type Scrimmage,
   type StatCategory,
@@ -148,6 +150,23 @@ export function rsvpEmbed(
       { name: `❌ Can't (${count(RsvpStatus.Declined)})`, value: list(RsvpStatus.Declined) },
     )
     .setFooter({ text: `Scrimmage ID: ${scrim.id}` });
+}
+
+export function pollEmbed(poll: AvailabilityPoll, votes: PollVote[], accent: number): EmbedBuilder {
+  const votersOf = (index: number): PollVote[] => votes.filter((vote) => vote.slotIndex === index);
+  const counts = poll.slots.map((_, index) => votersOf(index).length);
+  const max = Math.max(0, ...counts);
+  const lines = poll.slots.map((slot, index) => {
+    const voters = votersOf(index);
+    const star = max > 0 && counts[index] === max ? '⭐ ' : '';
+    const who = voters.length ? voters.map((vote) => `<@${vote.userId}>`).join(', ') : '—';
+    return `${star}**${index + 1}.** ${slot} — **${counts[index]}** ✅\n${who}`;
+  });
+  return new EmbedBuilder()
+    .setTitle(`📊 ${poll.title}`)
+    .setColor(accent)
+    .setDescription(lines.join('\n\n'))
+    .setFooter({ text: `Poll ID: ${poll.id} · tap a number to toggle your availability` });
 }
 
 export function scrimmageLine(scrim: Scrimmage, home: Team | null, away: Team | null): string {

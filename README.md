@@ -28,6 +28,8 @@ possible front-ends.
 - **Scrimmages** — propose a match between two teams, confirm it, cancel it, and record the result.
 - **Pre-game reminders** — the bot pings both teams before kickoff, in a configurable channel and via DM.
 - **RSVP** — players confirm attendance (Going / Maybe / Can't) with live counts, via buttons.
+- **Availability polls** — propose time slots, everyone taps the ones they can make, and the bot
+  highlights the slot that works for the most players.
 - **Standings & stats** — a league table (W/D/L, goal difference, points) from recorded results.
 - **Player stats & MVP** — record per-player, per-match stats (configurable categories, volleyball
   preset) and get a weighted MVP leaderboard.
@@ -144,6 +146,7 @@ For Docker and production deployment, see the [deployment guide](./docs/DEPLOYME
 | `/scrim stat <id> <player> <cat> <n>` | Record a player's stat for a scrimmage.      |
 | `/scrim sheet <id>`                   | Show a scrimmage's player stat sheet.        |
 | `/scrim rsvp <id>`                    | Open the attendance (RSVP) panel.            |
+| `/poll <title> <options>`             | Availability poll to find the best slot.     |
 | `/standings`                          | Show the server league table.                |
 | `/stats mvp`                          | Show the MVP leaderboard.                    |
 | `/stats player <user>`                | Show a player's totals and MVP score.        |
