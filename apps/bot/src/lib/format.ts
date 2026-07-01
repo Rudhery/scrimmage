@@ -54,6 +54,9 @@ export function teamEmbed(team: Team, roster: TeamMember[]): EmbedBuilder {
   if (team.description) {
     embed.setDescription(team.description);
   }
+  if (team.roleId) {
+    embed.addFields({ name: '🎽 Role', value: `<@&${team.roleId}>`, inline: true });
+  }
 
   const coaches = inRole(TeamRole.Coach);
   const assistants = inRole(TeamRole.Assistant);

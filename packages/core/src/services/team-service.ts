@@ -55,6 +55,7 @@ export class TeamService {
       captainId: data.captainId,
       description: data.description ?? null,
       logoUrl: data.logoUrl ?? null,
+      roleId: null,
       createdAt: this.runtime.now(),
     };
 
@@ -118,6 +119,12 @@ export class TeamService {
     const updated = await this.teams.update({ ...team, logoUrl: url });
     this.runtime.events.emit('team.logoChanged', { team: updated });
     return updated;
+  }
+
+  /** Link (or unlink, with `null`) a Discord role to the team. */
+  async setTeamRole(guildId: string, teamId: string, roleId: string | null): Promise<Team> {
+    const team = await this.getTeam(guildId, teamId);
+    return this.teams.update({ ...team, roleId });
   }
 
   /**

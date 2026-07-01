@@ -121,4 +121,15 @@ describe('TeamService', () => {
     const cleared = await service.setTeamLogo(GUILD, team.id, null);
     expect(cleared.logoUrl).toBeNull();
   });
+
+  it('links and unlinks a Discord role', async () => {
+    const team = await service.createTeam(baseInput());
+    expect(team.roleId).toBeNull();
+
+    const linked = await service.setTeamRole(GUILD, team.id, 'role-1');
+    expect(linked.roleId).toBe('role-1');
+
+    const unlinked = await service.setTeamRole(GUILD, team.id, null);
+    expect(unlinked.roleId).toBeNull();
+  });
 });

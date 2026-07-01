@@ -105,6 +105,25 @@ export const teamCommand: Command = {
           opt.setName('url').setDescription('Image URL (leave empty to clear the logo)'),
         ),
     )
+    .addSubcommand((sub) =>
+      sub
+        .setName('link')
+        .setDescription('Link a Discord role to the team (its colours).')
+        .addStringOption((opt) =>
+          opt.setName('team').setDescription('Team name').setRequired(true).setAutocomplete(true),
+        )
+        .addRoleOption((opt) =>
+          opt.setName('role').setDescription('The team role').setRequired(true),
+        ),
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName('unlink')
+        .setDescription('Remove the linked role from the team.')
+        .addStringOption((opt) =>
+          opt.setName('team').setDescription('Team name').setRequired(true).setAutocomplete(true),
+        ),
+    )
     .addSubcommandGroup((group) =>
       group
         .setName('member')
@@ -183,6 +202,12 @@ export const teamCommand: Command = {
         return;
       case 'logo':
         await setLogo(interaction, context, guildId);
+        return;
+      case 'link':
+        await linkRole(interaction, context, guildId);
+        return;
+      case 'unlink':
+        await unlinkRole(interaction, context, guildId);
         return;
     }
   },
@@ -412,6 +437,46 @@ async function setLogo(
       : `🛡️ Cleared the crest for **${updated.name}**.`,
     embeds: [teamEmbed(updated, roster)],
   });
+}
+
+async function linkRole(
+  interaction: ChatInputCommandInteraction,
+  context: AppContext,
+  guildId: string,
+): Promise<void> {
+  const role = interaction.options.getRole('role', true);
+  const team = await context.teams.getTeamByName(
+    guildId,
+    interaction.options.getString('team', true),
+  );
+  if (!canManageTeam(interaction, team)) {
+    await interaction.reply({ content: PERMISSION_DENIED, flags: MessageFlags.Ephemeral });
+    return;
+  }
+  const updated = await context.teams.setTeamRole(guildId, team.id, role.id);
+  const roster = await context.teams.getRoster(updated.id);
+  await interaction.reply({
+    content: `🎽 Linked <@&${role.id}> to **${updated.name}**.`,
+    embeds: [teamEmbed(updated, roster)],
+    allowedMentions: { parse: [] },
+  });
+}
+
+async function unlinkRole(
+  interaction: ChatInputCommandInteraction,
+  context: AppContext,
+  guildId: string,
+): Promise<void> {
+  const team = await context.teams.getTeamByName(
+    guildId,
+    interaction.options.getString('team', true),
+  );
+  if (!canManageTeam(interaction, team)) {
+    await interaction.reply({ content: PERMISSION_DENIED, flags: MessageFlags.Ephemeral });
+    return;
+  }
+  await context.teams.setTeamRole(guildId, team.id, null);
+  await interaction.reply(`🎽 Unlinked the role from **${team.name}**.`);
 }
 
 async function setRole(

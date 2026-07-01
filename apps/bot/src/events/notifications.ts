@@ -57,10 +57,15 @@ export function registerNotifications(context: AppContext): void {
       try {
         const channel = await client.channels.fetch(targetChannelId);
         if (channel && channel.isTextBased() && !channel.isDMBased()) {
-          const mentions = captains.map((id) => `<@${id}>`).join(' ');
+          const roleIds = [home?.roleId, away?.roleId].filter((id): id is string => id != null);
+          const mentions = [
+            ...captains.map((id) => `<@${id}>`),
+            ...roleIds.map((id) => `<@&${id}>`),
+          ].join(' ');
           await channel.send({
             content: `${mentions} ⏰ Reminder: your scrimmage kicks off ${kickoff}!`.trim(),
             embeds: [embed],
+            allowedMentions: { users: captains, roles: roleIds },
           });
         }
       } catch (error) {

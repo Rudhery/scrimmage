@@ -15,6 +15,7 @@ function toTeam(row: TeamRow): Team {
     captainId: row.captainId,
     description: row.description,
     logoUrl: row.logoUrl,
+    roleId: row.roleId,
     createdAt: row.createdAt,
   };
 }
@@ -45,6 +46,7 @@ export class DrizzleTeamRepository implements TeamRepository {
         captainId: team.captainId,
         description: team.description,
         logoUrl: team.logoUrl,
+        roleId: team.roleId,
       })
       .where(and(eq(teams.id, team.id), eq(teams.guildId, team.guildId)))
       .run();

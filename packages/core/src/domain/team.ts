@@ -17,6 +17,8 @@ export interface Team {
   readonly description: string | null;
   /** Optional URL of the team crest/logo, shown as the embed thumbnail. */
   readonly logoUrl: string | null;
+  /** Optional Discord role id linked to this team (its "colours"). */
+  readonly roleId: string | null;
   /** When the team was created. */
   readonly createdAt: Date;
 }

@@ -127,6 +127,8 @@ For Docker and production deployment, see the [deployment guide](./docs/DEPLOYME
 | `/team captain <team> <user>`         | Transfer captaincy to another member.        |
 | `/team role <team> <user> <role>`     | Set a member as coach, assistant or player.  |
 | `/team logo <team> [url]`             | Set or clear the team crest/logo.            |
+| `/team link <team> <role>`            | Link a Discord role to the team.             |
+| `/team unlink <team>`                 | Remove the team's linked role.               |
 | `/team member add <team> <user>`      | Add a member to a team.                      |
 | `/team member remove <team> <user>`   | Remove a member from a team.                 |
 | `/scrim propose <home> <away> <when>` | Propose a friendly match between two teams.  |

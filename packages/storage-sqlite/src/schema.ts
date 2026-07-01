@@ -18,6 +18,7 @@ export const teams = sqliteTable(
     captainId: text('captain_id').notNull(),
     description: text('description'),
     logoUrl: text('logo_url'),
+    roleId: text('role_id'),
     createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
   },
   (table) => [
