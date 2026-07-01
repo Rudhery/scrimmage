@@ -50,11 +50,45 @@ export interface Standing {
 }
 
 async function getJson<T>(url: string): Promise<T> {
-  const res = await fetch(url);
+  const res = await fetch(url, { credentials: 'include' });
   if (!res.ok) {
     throw new Error(`Request failed (${res.status})`);
   }
   return res.json() as Promise<T>;
+}
+
+export interface AuthUser {
+  id: string;
+  username: string;
+  globalName: string | null;
+  avatar: string | null;
+}
+
+export interface AuthGuild {
+  id: string;
+  name: string;
+  icon: string | null;
+  owner: boolean;
+  permissions: string;
+}
+
+export interface AuthMe {
+  oauthConfigured: boolean;
+  authenticated: boolean;
+  user: AuthUser | null;
+  guilds: AuthGuild[];
+}
+
+export function useAuth(): UseQueryResult<AuthMe> {
+  return useQuery({
+    queryKey: ['auth'],
+    queryFn: () => getJson<AuthMe>('/api/auth/me'),
+    staleTime: 60_000,
+  });
+}
+
+export async function logout(): Promise<void> {
+  await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
 }
 
 export function useTeams(guildId: string): UseQueryResult<Team[]> {

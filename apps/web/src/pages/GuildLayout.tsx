@@ -1,4 +1,6 @@
-import { Link, NavLink, Outlet, useParams } from 'react-router-dom';
+import { Link, NavLink, Navigate, Outlet, useNavigate, useParams } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
+import { logout, useAuth, type AuthUser } from '../api';
 
 const TABS = [
   { to: '', label: 'Standings', end: true },
@@ -8,6 +10,20 @@ const TABS = [
 
 export default function GuildLayout() {
   const { guildId = '' } = useParams();
+  const { data } = useAuth();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  // When login is required but the user is signed out, send them home.
+  if (data?.oauthConfigured && !data.authenticated) {
+    return <Navigate to="/" replace />;
+  }
+
+  async function handleLogout() {
+    await logout();
+    await queryClient.invalidateQueries();
+    navigate('/');
+  }
 
   return (
     <div className="mx-auto max-w-5xl px-5 pb-24 pt-8">
@@ -20,27 +36,63 @@ export default function GuildLayout() {
             server {guildId}
           </span>
         </div>
-        <nav className="flex items-center gap-1 rounded-xl border border-line bg-surface/60 p-1">
-          {TABS.map((tab) => (
-            <NavLink
-              key={tab.label}
-              to={tab.to}
-              end={tab.end}
-              className={({ isActive }) =>
-                `rounded-lg px-4 py-2 text-sm font-bold transition ${
-                  isActive ? 'bg-lime text-ink' : 'text-muted hover:text-fg'
-                }`
-              }
-            >
-              {tab.label}
-            </NavLink>
-          ))}
-        </nav>
+
+        <div className="flex items-center gap-3">
+          <nav className="flex items-center gap-1 rounded-xl border border-line bg-surface/60 p-1">
+            {TABS.map((tab) => (
+              <NavLink
+                key={tab.label}
+                to={tab.to}
+                end={tab.end}
+                className={({ isActive }) =>
+                  `rounded-lg px-4 py-2 text-sm font-bold transition ${
+                    isActive ? 'bg-lime text-ink' : 'text-muted hover:text-fg'
+                  }`
+                }
+              >
+                {tab.label}
+              </NavLink>
+            ))}
+          </nav>
+
+          {data?.authenticated && data.user ? (
+            <div className="flex items-center gap-2">
+              <Avatar user={data.user} />
+              <button
+                onClick={handleLogout}
+                className="rounded-lg border border-line px-3 py-2 text-sm font-semibold text-muted transition hover:text-fg"
+              >
+                Logout
+              </button>
+            </div>
+          ) : null}
+        </div>
       </header>
 
       <main className="pt-8">
         <Outlet />
       </main>
     </div>
+  );
+}
+
+function Avatar({ user }: { user: AuthUser }) {
+  if (user.avatar) {
+    return (
+      <img
+        src={`https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=64`}
+        alt=""
+        className="h-9 w-9 rounded-full border border-line object-cover"
+        title={user.globalName ?? user.username}
+      />
+    );
+  }
+  return (
+    <span
+      className="grid h-9 w-9 place-items-center rounded-full border border-line bg-surface2 font-display text-xs text-lime"
+      title={user.globalName ?? user.username}
+    >
+      {(user.globalName ?? user.username).slice(0, 2).toUpperCase()}
+    </span>
   );
 }

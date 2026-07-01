@@ -185,7 +185,15 @@ npm run dev:web   # Vite dev server on http://localhost:5173
 ```
 
 Open <http://localhost:5173>, enter your Discord **server ID**, and you'll see teams, scrimmages and
-the league table update as the bot is used. No auth yet — the guild is chosen from the URL.
+the league table update as the bot is used.
+
+### Login with Discord (optional)
+
+Set `DISCORD_CLIENT_SECRET` and add `OAUTH_REDIRECT_URI` (e.g.
+`http://localhost:5173/api/auth/callback`) to your app's **OAuth2 → Redirects** in the Developer
+Portal. The dashboard then requires **Login with Discord** and only shows the servers you're in —
+each guild's data is guarded server-side by your session. Without these variables the dashboard
+stays open and you pick a server by ID.
 
 ## 🗂️ Project structure
 

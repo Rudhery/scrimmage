@@ -5,15 +5,17 @@ This guide covers running Scrimmage in production. For local development see the
 
 ## Environment variables
 
-| Variable                | Required | Default              | Description                                                  |
-| ----------------------- | -------- | -------------------- | ------------------------------------------------------------ |
-| `DISCORD_TOKEN`         | ✅       | —                    | Your bot token from the Discord Developer Portal.            |
-| `DISCORD_CLIENT_ID`     | ✅       | —                    | Your application (client) ID.                                |
-| `DISCORD_GUILD_ID`      | ❌       | —                    | If set, commands register to this guild instantly on boot.   |
-| `DATABASE_PATH`         | ❌       | `./scrimmage.sqlite` | Path to the SQLite database file.                            |
-| `LOG_LEVEL`             | ❌       | `info`               | `trace` \| `debug` \| `info` \| `warn` \| `error` \| `fatal` |
-| `REMINDER_LEAD_MINUTES` | ❌       | `15`                 | Minutes before kickoff to send the pre-game reminder.        |
-| `REMINDER_POLL_SECONDS` | ❌       | `60`                 | How often the reminder loop checks for due scrimmages.       |
+| Variable                | Required | Default                    | Description                                                  |
+| ----------------------- | -------- | -------------------------- | ------------------------------------------------------------ |
+| `DISCORD_TOKEN`         | ✅       | —                          | Your bot token from the Discord Developer Portal.            |
+| `DISCORD_CLIENT_ID`     | ✅       | —                          | Your application (client) ID.                                |
+| `DISCORD_GUILD_ID`      | ❌       | —                          | If set, commands register to this guild instantly on boot.   |
+| `DATABASE_PATH`         | ❌       | `./scrimmage.sqlite`       | Path to the SQLite database file.                            |
+| `LOG_LEVEL`             | ❌       | `info`                     | `trace` \| `debug` \| `info` \| `warn` \| `error` \| `fatal` |
+| `REMINDER_LEAD_MINUTES` | ❌       | `15`                       | Minutes before kickoff to send the pre-game reminder.        |
+| `REMINDER_POLL_SECONDS` | ❌       | `60`                       | How often the reminder loop checks for due scrimmages.       |
+| `DISCORD_CLIENT_SECRET` | ❌       | —                          | Enables dashboard "Login with Discord" (with the id).        |
+| `OAUTH_REDIRECT_URI`    | ❌       | `…:5173/api/auth/callback` | OAuth2 redirect; must match the Developer Portal.            |
 
 The database file is created and migrated automatically on first start.
 

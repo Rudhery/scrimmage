@@ -5,7 +5,7 @@ import { createApp } from './app.js';
 
 const config = loadConfig();
 const storage = createSqliteStorage({ path: config.databasePath, migrate: true });
-const app = createApp(storage, { webOrigin: config.webOrigin });
+const app = createApp(storage, { webOrigin: config.webOrigin, oauth: config.oauth });
 
 const server = serve({ fetch: app.fetch, port: config.port }, (info) => {
   console.log(`Scrimmage API listening on http://localhost:${info.port}`);
