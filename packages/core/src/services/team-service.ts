@@ -6,6 +6,7 @@ import { resolveRuntime, type ServiceRuntime } from '../runtime.js';
 import { parse } from '../validation.js';
 
 const teamNameSchema = z.string().trim().min(2).max(50);
+const logoUrlSchema = z.string().trim().url('The logo must be a valid URL.').max(500);
 
 const createTeamSchema = z.object({
   guildId: z.string().min(1),
@@ -18,6 +19,7 @@ const createTeamSchema = z.object({
     .regex(/^[A-Za-z0-9]+$/, 'Tag must contain only letters and numbers.'),
   captainId: z.string().min(1),
   description: z.string().trim().max(300).optional(),
+  logoUrl: logoUrlSchema.optional(),
 });
 
 export type CreateTeamInput = z.infer<typeof createTeamSchema>;
@@ -52,6 +54,7 @@ export class TeamService {
       tag: data.tag.toUpperCase(),
       captainId: data.captainId,
       description: data.description ?? null,
+      logoUrl: data.logoUrl ?? null,
       createdAt: this.runtime.now(),
     };
 
@@ -102,6 +105,13 @@ export class TeamService {
       throw new ConflictError(`A team named "${name}" already exists in this server.`);
     }
     return this.teams.update({ ...team, name });
+  }
+
+  /** Set (or clear, with `null`) the team crest/logo URL. */
+  async setTeamLogo(guildId: string, teamId: string, logoUrl: string | null): Promise<Team> {
+    const team = await this.getTeam(guildId, teamId);
+    const url = logoUrl === null ? null : parse(logoUrlSchema, logoUrl);
+    return this.teams.update({ ...team, logoUrl: url });
   }
 
   /**

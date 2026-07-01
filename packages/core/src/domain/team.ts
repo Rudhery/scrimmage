@@ -15,6 +15,8 @@ export interface Team {
   readonly captainId: string;
   /** Optional free-text description / bio. */
   readonly description: string | null;
+  /** Optional URL of the team crest/logo, shown as the embed thumbnail. */
+  readonly logoUrl: string | null;
   /** When the team was created. */
   readonly createdAt: Date;
 }

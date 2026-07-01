@@ -40,9 +40,13 @@ export function teamEmbed(team: Team, roster: TeamMember[]): EmbedBuilder {
     .addFields(
       { name: '👑 Captain', value: `<@${team.captainId}>`, inline: true },
       { name: '👥 Members', value: String(roster.length), inline: true },
+      { name: '📅 Created', value: time(team.createdAt, TimestampStyles.LongDate), inline: true },
     )
     .setFooter({ text: `Team ID: ${team.id}` });
 
+  if (team.logoUrl) {
+    embed.setThumbnail(team.logoUrl);
+  }
   if (team.description) {
     embed.setDescription(team.description);
   }

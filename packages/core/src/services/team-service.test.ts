@@ -106,4 +106,19 @@ describe('TeamService', () => {
     const roster = await service.getRoster(team.id);
     expect(roster.find((member) => member.userId === 'coach-1')?.role).toBe(TeamRole.Coach);
   });
+
+  it('sets and clears the team logo, rejecting invalid URLs', async () => {
+    const team = await service.createTeam(baseInput());
+    expect(team.logoUrl).toBeNull();
+
+    const withLogo = await service.setTeamLogo(GUILD, team.id, 'https://example.com/crest.png');
+    expect(withLogo.logoUrl).toBe('https://example.com/crest.png');
+
+    await expect(service.setTeamLogo(GUILD, team.id, 'not-a-url')).rejects.toBeInstanceOf(
+      ValidationError,
+    );
+
+    const cleared = await service.setTeamLogo(GUILD, team.id, null);
+    expect(cleared.logoUrl).toBeNull();
+  });
 });

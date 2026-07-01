@@ -86,6 +86,17 @@ export const teamCommand: Command = {
             ),
         ),
     )
+    .addSubcommand((sub) =>
+      sub
+        .setName('logo')
+        .setDescription('Set or clear the team crest/logo.')
+        .addStringOption((opt) =>
+          opt.setName('team').setDescription('Team name').setRequired(true).setAutocomplete(true),
+        )
+        .addStringOption((opt) =>
+          opt.setName('url').setDescription('Image URL (leave empty to clear the logo)'),
+        ),
+    )
     .addSubcommandGroup((group) =>
       group
         .setName('member')
@@ -159,6 +170,9 @@ export const teamCommand: Command = {
       case 'role':
         await setRole(interaction, context, guildId);
         return;
+      case 'logo':
+        await setLogo(interaction, context, guildId);
+        return;
     }
   },
 
@@ -201,6 +215,14 @@ function buildCreateTeamModal(): ModalBuilder {
           .setMaxLength(300)
           .setRequired(false),
       ),
+      new ActionRowBuilder<TextInputBuilder>().addComponents(
+        new TextInputBuilder()
+          .setCustomId('logoUrl')
+          .setLabel('Logo / crest URL (optional)')
+          .setStyle(TextInputStyle.Short)
+          .setMaxLength(500)
+          .setRequired(false),
+      ),
     );
 }
 
@@ -224,12 +246,14 @@ export async function handleTeamModal(
   }
 
   const description = interaction.fields.getTextInputValue('description').trim();
+  const logoUrl = interaction.fields.getTextInputValue('logoUrl').trim();
   const team = await context.teams.createTeam({
     guildId,
     name: interaction.fields.getTextInputValue('name'),
     tag: interaction.fields.getTextInputValue('tag'),
     captainId: interaction.user.id,
     description: description.length > 0 ? description : undefined,
+    logoUrl: logoUrl.length > 0 ? logoUrl : undefined,
   });
 
   const roster = await context.teams.getRoster(team.id);
@@ -325,6 +349,34 @@ async function transferCaptain(
     `👑 You are now the captain of **${updated.name}**.`,
     context.logger,
   );
+}
+
+async function setLogo(
+  interaction: ChatInputCommandInteraction,
+  context: AppContext,
+  guildId: string,
+): Promise<void> {
+  const url = interaction.options.getString('url');
+  const team = await context.teams.getTeamByName(
+    guildId,
+    interaction.options.getString('team', true),
+  );
+  if (!canManageTeam(interaction, team)) {
+    await interaction.reply({ content: PERMISSION_DENIED, flags: MessageFlags.Ephemeral });
+    return;
+  }
+  const updated = await context.teams.setTeamLogo(
+    guildId,
+    team.id,
+    url && url.length > 0 ? url : null,
+  );
+  const roster = await context.teams.getRoster(updated.id);
+  await interaction.reply({
+    content: updated.logoUrl
+      ? `🛡️ Updated the crest for **${updated.name}**.`
+      : `🛡️ Cleared the crest for **${updated.name}**.`,
+    embeds: [teamEmbed(updated, roster)],
+  });
 }
 
 async function setRole(

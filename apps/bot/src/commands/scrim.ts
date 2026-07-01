@@ -48,6 +48,14 @@ export const scrimCommand: Command = {
     )
     .addSubcommand((sub) =>
       sub
+        .setName('info')
+        .setDescription('Show the details of a scrimmage.')
+        .addStringOption((opt) =>
+          opt.setName('id').setDescription('Scrimmage').setRequired(true).setAutocomplete(true),
+        ),
+    )
+    .addSubcommand((sub) =>
+      sub
         .setName('confirm')
         .setDescription('Confirm a proposed scrimmage.')
         .addStringOption((opt) =>
@@ -102,6 +110,9 @@ export const scrimCommand: Command = {
     switch (interaction.options.getSubcommand()) {
       case 'propose':
         await propose(interaction, context, guildId);
+        return;
+      case 'info':
+        await info(interaction, context, guildId);
         return;
       case 'confirm':
         await confirm(interaction, context, guildId);
@@ -189,6 +200,19 @@ async function propose(
     components: [scrimActionRow(scrim.id)],
   });
   await notifyCaptains(context, home, away, '📣 A new scrimmage was proposed:', embed);
+}
+
+async function info(
+  interaction: ChatInputCommandInteraction,
+  context: AppContext,
+  guildId: string,
+): Promise<void> {
+  const scrim = await context.scrimmages.getScrimmage(
+    guildId,
+    interaction.options.getString('id', true),
+  );
+  const [home, away] = await resolveTeams(context, guildId, scrim.homeTeamId, scrim.awayTeamId);
+  await interaction.reply({ embeds: [scrimmageEmbed(scrim, home, away)] });
 }
 
 async function confirm(
