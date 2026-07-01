@@ -2,7 +2,10 @@ import { EmbedBuilder, time, TimestampStyles } from 'discord.js';
 import {
   ScrimmageStatus,
   TeamRole,
+  type PlayerAggregate,
+  type PlayerStatLine,
   type Scrimmage,
+  type StatCategory,
   type Team,
   type TeamMember,
   type TeamStanding,
@@ -176,5 +179,76 @@ export function scrimmageListEmbed(
   if (pageCount > 1) {
     embed.setFooter({ text: `Page ${page + 1}/${pageCount}` });
   }
+  return embed;
+}
+
+function round(value: number): number {
+  return Math.round(value * 10) / 10;
+}
+
+export function mvpLine(rank: number, aggregate: PlayerAggregate): string {
+  return (
+    `\`${String(rank).padStart(2, ' ')}\` <@${aggregate.userId}> — ` +
+    `**${round(aggregate.score)}** pts · ${aggregate.appearances} app`
+  );
+}
+
+export function statsLeaderboardEmbed(
+  lines: string[],
+  page: number,
+  pageCount: number,
+): EmbedBuilder {
+  const embed = new EmbedBuilder()
+    .setTitle('🏐 MVP leaderboard')
+    .setColor(BRAND_COLOR)
+    .setDescription(lines.length ? lines.join('\n') : 'No player stats recorded yet.');
+  if (pageCount > 1) {
+    embed.setFooter({ text: `Page ${page + 1}/${pageCount}` });
+  }
+  return embed;
+}
+
+export function playerStatsEmbed(
+  userId: string,
+  aggregate: PlayerAggregate | null,
+  categories: StatCategory[],
+): EmbedBuilder {
+  const embed = new EmbedBuilder()
+    .setTitle('Player stats')
+    .setColor(BRAND_COLOR)
+    .setDescription(`<@${userId}>`);
+  if (!aggregate) {
+    embed.addFields({ name: 'No stats yet', value: 'This player has no recorded stats.' });
+    return embed;
+  }
+  embed.addFields(
+    { name: 'MVP score', value: String(round(aggregate.score)), inline: true },
+    { name: 'Appearances', value: String(aggregate.appearances), inline: true },
+  );
+  const totals = categories
+    .map((category) => `${category.label}: **${aggregate.totals[category.key] ?? 0}**`)
+    .join(' · ');
+  if (totals) {
+    embed.addFields({ name: 'Totals', value: totals });
+  }
+  return embed;
+}
+
+export function scrimSheetEmbed(lines: PlayerStatLine[], categories: StatCategory[]): EmbedBuilder {
+  const embed = new EmbedBuilder().setTitle('📋 Match stat sheet').setColor(BRAND_COLOR);
+  if (lines.length === 0) {
+    embed.setDescription('No stats recorded for this scrimmage yet. Use `/scrim stat`.');
+    return embed;
+  }
+  embed.setDescription(
+    lines
+      .map((line) => {
+        const parts = categories
+          .map((category) => `${category.label} \`${line.values[category.key] ?? 0}\``)
+          .join(' · ');
+        return `<@${line.userId}>\n${parts}`;
+      })
+      .join('\n\n'),
+  );
   return embed;
 }

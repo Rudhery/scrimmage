@@ -4,6 +4,7 @@ import type { AppContext } from '../context.js';
 import { renderTeamList } from '../commands/team.js';
 import { renderScrimList } from '../commands/scrim.js';
 import { renderStandings } from '../commands/standings.js';
+import { renderMvp } from '../commands/stats.js';
 
 const PREFIX = 'page';
 
@@ -42,5 +43,10 @@ export async function handlePaginationButton(
   if (kind === 'standings') {
     const page = Number.parseInt(parts[2] ?? '0', 10);
     await interaction.update(await renderStandings(context, guildId, page));
+    return;
+  }
+  if (kind === 'mvp') {
+    const page = Number.parseInt(parts[2] ?? '0', 10);
+    await interaction.update(await renderMvp(context, guildId, page));
   }
 }

@@ -1,7 +1,9 @@
 import {
   GuildSettingsService,
+  PlayerStatsService,
   ScrimmageService,
   StandingsService,
+  StatCategoryService,
   TeamService,
   TypedEventBus,
   type EventBus,
@@ -26,6 +28,8 @@ export interface AppContext {
   readonly scrimmages: ScrimmageService;
   readonly standings: StandingsService;
   readonly guildSettings: GuildSettingsService;
+  readonly statCategories: StatCategoryService;
+  readonly playerStats: PlayerStatsService;
 }
 
 /** Wire up storage, the domain event bus and services from configuration. */
@@ -34,6 +38,7 @@ export function createContext(config: Config, logger: Logger, client: Client): A
   const events = new TypedEventBus({
     onError: (error, event) => logger.error({ err: error, event }, 'event listener failed'),
   });
+  const statCategories = new StatCategoryService(storage.statCategories);
   return {
     config,
     logger,
@@ -44,5 +49,7 @@ export function createContext(config: Config, logger: Logger, client: Client): A
     scrimmages: new ScrimmageService(storage.scrimmages, storage.teams, { events }),
     standings: new StandingsService(storage.scrimmages),
     guildSettings: new GuildSettingsService(storage.guildSettings),
+    statCategories,
+    playerStats: new PlayerStatsService(storage.playerStats, statCategories),
   };
 }

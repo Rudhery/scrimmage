@@ -28,6 +28,8 @@ possible front-ends.
 - **Scrimmages** — propose a match between two teams, confirm it, cancel it, and record the result.
 - **Pre-game reminders** — the bot pings both teams before kickoff, in a configurable channel and via DM.
 - **Standings & stats** — a league table (W/D/L, goal difference, points) from recorded results.
+- **Player stats & MVP** — record per-player, per-match stats (configurable categories, volleyball
+  preset) and get a weighted MVP leaderboard.
 - **Server-scoped** — every team and match belongs to the guild it was created in.
 - **Pluggable storage** — the default is SQLite via Drizzle ORM; the storage layer is an interface,
   so other backends (PostgreSQL, in-memory, …) can be added without touching the domain logic.
@@ -133,7 +135,11 @@ For Docker and production deployment, see the [deployment guide](./docs/DEPLOYME
 | `/scrim cancel <id>`                  | Cancel a scrimmage.                          |
 | `/scrim list [status]`                | List scrimmages, optionally filtered.        |
 | `/scrim result <id> <home> <away>`    | Record the final score of a confirmed match. |
+| `/scrim stat <id> <player> <cat> <n>` | Record a player's stat for a scrimmage.      |
+| `/scrim sheet <id>`                   | Show a scrimmage's player stat sheet.        |
 | `/standings`                          | Show the server league table.                |
+| `/stats mvp`                          | Show the MVP leaderboard.                    |
+| `/stats player <user>`                | Show a player's totals and MVP score.        |
 | `/config view`                        | Show the server settings.                    |
 | `/config announce [channel]`          | Set/clear the announcement channel.          |
 

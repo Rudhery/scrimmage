@@ -12,10 +12,19 @@ import { ScrimmageStatus, type Scrimmage, type Team } from '@scrimmage/core';
 import type { AppContext } from '../context.js';
 import type { Command } from '../lib/command.js';
 import { parseSchedule } from '../lib/time.js';
-import { scrimmageEmbed, scrimmageLine, scrimmageListEmbed } from '../lib/format.js';
+import {
+  scrimSheetEmbed,
+  scrimmageEmbed,
+  scrimmageLine,
+  scrimmageListEmbed,
+} from '../lib/format.js';
 import { paginate, paginationRow, type PagedView } from '../lib/pagination.js';
 import { requireGuildId } from '../lib/interaction.js';
-import { respondScrimmageIds, respondTeamNames } from '../lib/autocomplete.js';
+import {
+  respondScrimmageIds,
+  respondStatCategories,
+  respondTeamNames,
+} from '../lib/autocomplete.js';
 
 export const scrimCommand: Command = {
   data: new SlashCommandBuilder()
@@ -99,6 +108,35 @@ export const scrimCommand: Command = {
         .addIntegerOption((opt) =>
           opt.setName('away').setDescription('Away team score').setRequired(true).setMinValue(0),
         ),
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName('stat')
+        .setDescription("Record one of a player's stats for a scrimmage.")
+        .addStringOption((opt) =>
+          opt.setName('id').setDescription('Scrimmage').setRequired(true).setAutocomplete(true),
+        )
+        .addUserOption((opt) =>
+          opt.setName('player').setDescription('The player').setRequired(true),
+        )
+        .addStringOption((opt) =>
+          opt
+            .setName('category')
+            .setDescription('Stat category')
+            .setRequired(true)
+            .setAutocomplete(true),
+        )
+        .addIntegerOption((opt) =>
+          opt.setName('value').setDescription('Value').setRequired(true).setMinValue(0),
+        ),
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName('sheet')
+        .setDescription('Show the recorded stat sheet for a scrimmage.')
+        .addStringOption((opt) =>
+          opt.setName('id').setDescription('Scrimmage').setRequired(true).setAutocomplete(true),
+        ),
     ),
 
   async execute(interaction, context) {
@@ -126,6 +164,12 @@ export const scrimCommand: Command = {
       case 'result':
         await result(interaction, context, guildId);
         return;
+      case 'stat':
+        await recordStat(interaction, context, guildId);
+        return;
+      case 'sheet':
+        await sheet(interaction, context, guildId);
+        return;
     }
   },
 
@@ -133,6 +177,10 @@ export const scrimCommand: Command = {
     const focused = interaction.options.getFocused(true);
     if (focused.name === 'home' || focused.name === 'away') {
       await respondTeamNames(interaction, context);
+      return;
+    }
+    if (focused.name === 'category') {
+      await respondStatCategories(interaction, context);
       return;
     }
     if (focused.name === 'id') {
@@ -349,6 +397,62 @@ export async function handleScrimButton(
   }
   const reply = await applyScrimAction(context, guildId, scrimId, action);
   await interaction.update({ ...reply, components: [] });
+}
+
+async function recordStat(
+  interaction: ChatInputCommandInteraction,
+  context: AppContext,
+  guildId: string,
+): Promise<void> {
+  const scrim = await context.scrimmages.getScrimmage(
+    guildId,
+    interaction.options.getString('id', true),
+  );
+  const user = interaction.options.getUser('player', true);
+  const category = interaction.options.getString('category', true);
+  const value = interaction.options.getInteger('value', true);
+  const teamId = await inferTeamId(context, scrim, user.id);
+
+  await context.playerStats.setStat({
+    guildId,
+    scrimmageId: scrim.id,
+    teamId,
+    userId: user.id,
+    key: category,
+    value,
+  });
+  await interaction.reply(`📊 Recorded **${value}** ${category} for <@${user.id}>.`);
+}
+
+async function sheet(
+  interaction: ChatInputCommandInteraction,
+  context: AppContext,
+  guildId: string,
+): Promise<void> {
+  const scrim = await context.scrimmages.getScrimmage(
+    guildId,
+    interaction.options.getString('id', true),
+  );
+  const [lines, categories] = await Promise.all([
+    context.playerStats.forScrimmage(scrim.id),
+    context.statCategories.list(guildId),
+  ]);
+  await interaction.reply({ embeds: [scrimSheetEmbed(lines, categories)] });
+}
+
+/** Best-effort: which of the scrimmage's two teams is the player on. */
+async function inferTeamId(context: AppContext, scrim: Scrimmage, userId: string): Promise<string> {
+  const [home, away] = await Promise.all([
+    context.storage.teams.findMember(scrim.homeTeamId, userId),
+    context.storage.teams.findMember(scrim.awayTeamId, userId),
+  ]);
+  if (home) {
+    return scrim.homeTeamId;
+  }
+  if (away) {
+    return scrim.awayTeamId;
+  }
+  return '';
 }
 
 /** Resolve both teams of a scrimmage, tolerating teams that were deleted. */

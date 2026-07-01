@@ -26,6 +26,26 @@ export async function respondTeamNames(
   await interaction.respond(choices);
 }
 
+/** Suggest the guild's configured stat categories for the focused option. */
+export async function respondStatCategories(
+  interaction: AutocompleteInteraction,
+  context: AppContext,
+): Promise<void> {
+  const guildId = interaction.guildId;
+  if (!guildId) {
+    await interaction.respond([]);
+    return;
+  }
+  const query = interaction.options.getFocused().toLowerCase();
+  const categories = await context.statCategories.list(guildId);
+  await interaction.respond(
+    categories
+      .filter((category) => `${category.label} ${category.key}`.toLowerCase().includes(query))
+      .slice(0, MAX_CHOICES)
+      .map((category) => ({ name: category.label, value: category.key })),
+  );
+}
+
 /**
  * Suggest scrimmage IDs for the focused option, labelled with the matchup and
  * status so they are easy to recognise. Pass `isEligible` to only offer the

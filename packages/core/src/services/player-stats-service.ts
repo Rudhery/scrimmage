@@ -15,6 +15,15 @@ export interface RecordStatsInput {
   values: Record<string, number>;
 }
 
+export interface SetStatInput {
+  guildId: string;
+  scrimmageId: string;
+  teamId: string;
+  userId: string;
+  key: string;
+  value: number;
+}
+
 /** Optional filter for aggregation (e.g. restrict to a season's scrimmages). */
 export interface AggregateFilter {
   scrimmageIds?: ReadonlySet<string>;
@@ -43,6 +52,27 @@ export class PlayerStatsService {
       teamId: input.teamId,
       userId: input.userId,
       values,
+    };
+    await this.stats.set(line);
+    return line;
+  }
+
+  /** Set a single stat for a player, merging with their existing line. */
+  async setStat(input: SetStatInput): Promise<PlayerStatLine> {
+    const allowed = new Set((await this.categories.list(input.guildId)).map((c) => c.key));
+    if (!allowed.has(input.key)) {
+      throw new ValidationError(`Unknown stat category "${input.key}".`);
+    }
+    const value = parse(valueSchema, input.value);
+    const existing = (await this.stats.listByScrimmage(input.scrimmageId)).find(
+      (line) => line.userId === input.userId,
+    );
+    const line: PlayerStatLine = {
+      scrimmageId: input.scrimmageId,
+      guildId: input.guildId,
+      teamId: input.teamId,
+      userId: input.userId,
+      values: { ...(existing?.values ?? {}), [input.key]: value },
     };
     await this.stats.set(line);
     return line;

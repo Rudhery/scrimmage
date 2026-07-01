@@ -4,6 +4,7 @@ import { teamCommand } from './team.js';
 import { scrimCommand } from './scrim.js';
 import { standingsCommand } from './standings.js';
 import { configCommand } from './config.js';
+import { statsCommand } from './stats.js';
 
 /** Every command the bot exposes. */
 export const commandList: readonly Command[] = [
@@ -11,6 +12,7 @@ export const commandList: readonly Command[] = [
   scrimCommand,
   standingsCommand,
   configCommand,
+  statsCommand,
 ];
 
 /** Commands indexed by name for fast lookup during interaction handling. */
