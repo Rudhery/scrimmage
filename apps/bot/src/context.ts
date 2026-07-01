@@ -1,5 +1,6 @@
 import {
   ScrimmageService,
+  StandingsService,
   TeamService,
   TypedEventBus,
   type EventBus,
@@ -22,6 +23,7 @@ export interface AppContext {
   readonly storage: Storage;
   readonly teams: TeamService;
   readonly scrimmages: ScrimmageService;
+  readonly standings: StandingsService;
 }
 
 /** Wire up storage, the domain event bus and services from configuration. */
@@ -38,5 +40,6 @@ export function createContext(config: Config, logger: Logger, client: Client): A
     storage,
     teams: new TeamService(storage.teams, { events }),
     scrimmages: new ScrimmageService(storage.scrimmages, storage.teams, { events }),
+    standings: new StandingsService(storage.scrimmages),
   };
 }

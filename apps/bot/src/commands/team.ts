@@ -11,7 +11,7 @@ import {
 import { TeamRole } from '@scrimmage/core';
 import type { AppContext } from '../context.js';
 import type { Command } from '../lib/command.js';
-import { ROLE_LABEL, teamEmbed, teamListEmbed } from '../lib/format.js';
+import { ROLE_LABEL, teamEmbed, teamListEmbed, teamStatsEmbed } from '../lib/format.js';
 import { paginate, paginationRow, type PagedView } from '../lib/pagination.js';
 import { canManageTeam, requireGuildId } from '../lib/interaction.js';
 import { respondTeamNames } from '../lib/autocomplete.js';
@@ -40,6 +40,14 @@ export const teamCommand: Command = {
       sub
         .setName('info')
         .setDescription("Show a team's details and roster.")
+        .addStringOption((opt) =>
+          opt.setName('team').setDescription('Team name').setRequired(true).setAutocomplete(true),
+        ),
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName('stats')
+        .setDescription("Show a team's win/draw/loss record.")
         .addStringOption((opt) =>
           opt.setName('team').setDescription('Team name').setRequired(true).setAutocomplete(true),
         ),
@@ -160,6 +168,9 @@ export const teamCommand: Command = {
         return;
       case 'info':
         await teamInfo(interaction, context, guildId);
+        return;
+      case 'stats':
+        await teamStats(interaction, context, guildId);
         return;
       case 'rename':
         await renameTeam(interaction, context, guildId);
@@ -317,6 +328,19 @@ async function teamInfo(
   );
   const roster = await context.teams.getRoster(team.id);
   await interaction.reply({ embeds: [teamEmbed(team, roster)] });
+}
+
+async function teamStats(
+  interaction: ChatInputCommandInteraction,
+  context: AppContext,
+  guildId: string,
+): Promise<void> {
+  const team = await context.teams.getTeamByName(
+    guildId,
+    interaction.options.getString('team', true),
+  );
+  const standing = await context.standings.forTeam(guildId, team.id);
+  await interaction.reply({ embeds: [teamStatsEmbed(team, standing)] });
 }
 
 async function renameTeam(

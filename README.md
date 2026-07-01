@@ -27,6 +27,7 @@ possible front-ends.
 - **Rosters** — add and remove members, assign a captain.
 - **Scrimmages** — propose a match between two teams, confirm it, cancel it, and record the result.
 - **Pre-game reminders** — the bot pings both teams before kickoff, in the channel and via DM.
+- **Standings & stats** — a league table (W/D/L, goal difference, points) from recorded results.
 - **Server-scoped** — every team and match belongs to the guild it was created in.
 - **Pluggable storage** — the default is SQLite via Drizzle ORM; the storage layer is an interface,
   so other backends (PostgreSQL, in-memory, …) can be added without touching the domain logic.
@@ -112,6 +113,7 @@ For Docker and production deployment, see the [deployment guide](./docs/DEPLOYME
 | `/team delete <team>`                 | Delete a team.                               |
 | `/team list`                          | List every team in the server.               |
 | `/team info <team>`                   | Show a team's details and roster.            |
+| `/team stats <team>`                  | Show a team's win/draw/loss record.          |
 | `/team rename <team> <name>`          | Rename a team.                               |
 | `/team captain <team> <user>`         | Transfer captaincy to another member.        |
 | `/team role <team> <user> <role>`     | Set a member as coach, assistant or player.  |
@@ -124,6 +126,7 @@ For Docker and production deployment, see the [deployment guide](./docs/DEPLOYME
 | `/scrim cancel <id>`                  | Cancel a scrimmage.                          |
 | `/scrim list [status]`                | List scrimmages, optionally filtered.        |
 | `/scrim result <id> <home> <away>`    | Record the final score of a confirmed match. |
+| `/standings`                          | Show the server league table.                |
 
 Teams have a **captain**, **coaches**, **assistants**, **players** and an optional **crest/logo**.
 `/team create` opens a **modal form**, team and scrimmage options offer **autocomplete**, and a

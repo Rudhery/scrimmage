@@ -5,6 +5,7 @@ import {
   type Scrimmage,
   type Team,
   type TeamMember,
+  type TeamStanding,
 } from '@scrimmage/core';
 
 const BRAND_COLOR = 0x5865f2;
@@ -115,6 +116,51 @@ export function scrimmageLine(scrim: Scrimmage, home: Team | null, away: Team | 
     `${STATUS_LABEL[scrim.status]} **${h.tag}** vs **${a.tag}**${result}`,
     `${time(scrim.scheduledAt, TimestampStyles.ShortDateTime)} · \`${scrim.id}\``,
   ].join('\n');
+}
+
+function formatGoalDifference(gd: number): string {
+  return gd > 0 ? `+${gd}` : String(gd);
+}
+
+export function teamStatsEmbed(team: Team, standing: TeamStanding): EmbedBuilder {
+  const embed = new EmbedBuilder()
+    .setTitle(`${team.name} \`[${team.tag}]\` — stats`)
+    .setColor(BRAND_COLOR)
+    .addFields(
+      { name: 'Played', value: String(standing.played), inline: true },
+      {
+        name: 'W–D–L',
+        value: `${standing.wins}–${standing.draws}–${standing.losses}`,
+        inline: true,
+      },
+      { name: 'Points', value: String(standing.points), inline: true },
+      { name: 'Goals (F–A)', value: `${standing.goalsFor}–${standing.goalsAgainst}`, inline: true },
+      { name: 'Goal diff', value: formatGoalDifference(standing.goalDifference), inline: true },
+    );
+  if (team.logoUrl) {
+    embed.setThumbnail(team.logoUrl);
+  }
+  return embed;
+}
+
+export function standingLine(rank: number, team: Team | null, standing: TeamStanding): string {
+  const tag = team ? team.tag : '???';
+  return (
+    `\`${String(rank).padStart(2, ' ')}\` **${tag}** — ${standing.points} pts · ` +
+    `${standing.played}P · ${standing.wins}–${standing.draws}–${standing.losses} · ` +
+    `GD ${formatGoalDifference(standing.goalDifference)}`
+  );
+}
+
+export function standingsEmbed(lines: string[], page: number, pageCount: number): EmbedBuilder {
+  const embed = new EmbedBuilder()
+    .setTitle('🏆 Standings')
+    .setColor(BRAND_COLOR)
+    .setDescription(lines.length ? lines.join('\n') : 'No matches have been played yet.');
+  if (pageCount > 1) {
+    embed.setFooter({ text: `Page ${page + 1}/${pageCount}` });
+  }
+  return embed;
 }
 
 export function scrimmageListEmbed(

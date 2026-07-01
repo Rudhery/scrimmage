@@ -3,6 +3,7 @@ import type { ScrimmageStatus } from '@scrimmage/core';
 import type { AppContext } from '../context.js';
 import { renderTeamList } from '../commands/team.js';
 import { renderScrimList } from '../commands/scrim.js';
+import { renderStandings } from '../commands/standings.js';
 
 const PREFIX = 'page';
 
@@ -36,5 +37,10 @@ export async function handlePaginationButton(
     const page = Number.parseInt(parts[3] ?? '0', 10);
     const status = statusPart === 'all' ? null : (statusPart as ScrimmageStatus);
     await interaction.update(await renderScrimList(context, guildId, status, page));
+    return;
+  }
+  if (kind === 'standings') {
+    const page = Number.parseInt(parts[2] ?? '0', 10);
+    await interaction.update(await renderStandings(context, guildId, page));
   }
 }
