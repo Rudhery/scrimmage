@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { noopEventBus, type EventBus } from './events.js';
 
 /** A source of the current time. Injectable so behaviour is deterministic in tests. */
 export type Clock = () => Date;
@@ -16,6 +17,8 @@ export const uuid: IdGenerator = () => randomUUID();
 export interface ServiceRuntime {
   readonly now: Clock;
   readonly generateId: IdGenerator;
+  /** Where services publish domain events. Defaults to a no-op bus. */
+  readonly events: EventBus;
 }
 
 /** Build a {@link ServiceRuntime}, falling back to system defaults. */
@@ -23,5 +26,6 @@ export function resolveRuntime(overrides?: Partial<ServiceRuntime>): ServiceRunt
   return {
     now: overrides?.now ?? systemClock,
     generateId: overrides?.generateId ?? uuid,
+    events: overrides?.events ?? noopEventBus,
   };
 }

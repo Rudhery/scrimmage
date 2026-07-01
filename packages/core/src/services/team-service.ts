@@ -65,6 +65,7 @@ export class TeamService {
       role: TeamRole.Player,
       joinedAt: created.createdAt,
     });
+    this.runtime.events.emit('team.created', { team: created });
     return created;
   }
 
@@ -91,8 +92,9 @@ export class TeamService {
   }
 
   async deleteTeam(guildId: string, teamId: string): Promise<void> {
-    await this.getTeam(guildId, teamId);
+    const team = await this.getTeam(guildId, teamId);
     await this.teams.delete(guildId, teamId);
+    this.runtime.events.emit('team.deleted', { team });
   }
 
   /** Rename a team, enforcing the same name rules and uniqueness as creation. */
@@ -104,14 +106,18 @@ export class TeamService {
     if (clash && clash.id !== team.id) {
       throw new ConflictError(`A team named "${name}" already exists in this server.`);
     }
-    return this.teams.update({ ...team, name });
+    const renamed = await this.teams.update({ ...team, name });
+    this.runtime.events.emit('team.renamed', { team: renamed, previousName: team.name });
+    return renamed;
   }
 
   /** Set (or clear, with `null`) the team crest/logo URL. */
   async setTeamLogo(guildId: string, teamId: string, logoUrl: string | null): Promise<Team> {
     const team = await this.getTeam(guildId, teamId);
     const url = logoUrl === null ? null : parse(logoUrlSchema, logoUrl);
-    return this.teams.update({ ...team, logoUrl: url });
+    const updated = await this.teams.update({ ...team, logoUrl: url });
+    this.runtime.events.emit('team.logoChanged', { team: updated });
+    return updated;
   }
 
   /**
@@ -133,7 +139,12 @@ export class TeamService {
         joinedAt: this.runtime.now(),
       });
     }
-    return this.teams.update({ ...team, captainId: newCaptainId });
+    const updated = await this.teams.update({ ...team, captainId: newCaptainId });
+    this.runtime.events.emit('team.captainTransferred', {
+      team: updated,
+      previousCaptainId: team.captainId,
+    });
+    return updated;
   }
 
   async addMember(
@@ -142,7 +153,7 @@ export class TeamService {
     userId: string,
     role: TeamRole = TeamRole.Player,
   ): Promise<TeamMember> {
-    await this.getTeam(guildId, teamId);
+    const team = await this.getTeam(guildId, teamId);
 
     const existing = await this.teams.findMember(teamId, userId);
     if (existing) {
@@ -151,6 +162,7 @@ export class TeamService {
 
     const member: TeamMember = { teamId, userId, role, joinedAt: this.runtime.now() };
     await this.teams.addMember(member);
+    this.runtime.events.emit('team.memberAdded', { team, member });
     return member;
   }
 
@@ -161,16 +173,20 @@ export class TeamService {
     userId: string,
     role: TeamRole,
   ): Promise<TeamMember> {
-    await this.getTeam(guildId, teamId);
+    const team = await this.getTeam(guildId, teamId);
 
     const existing = await this.teams.findMember(teamId, userId);
-    if (!existing) {
-      const member: TeamMember = { teamId, userId, role, joinedAt: this.runtime.now() };
+    const member: TeamMember = existing
+      ? { ...existing, role }
+      : { teamId, userId, role, joinedAt: this.runtime.now() };
+
+    if (existing) {
+      await this.teams.setMemberRole(teamId, userId, role);
+    } else {
       await this.teams.addMember(member);
-      return member;
     }
-    await this.teams.setMemberRole(teamId, userId, role);
-    return { ...existing, role };
+    this.runtime.events.emit('team.memberRoleChanged', { team, member });
+    return member;
   }
 
   async removeMember(guildId: string, teamId: string, userId: string): Promise<void> {
@@ -184,6 +200,7 @@ export class TeamService {
       throw new NotFoundError('That user is not a member of this team.');
     }
     await this.teams.removeMember(teamId, userId);
+    this.runtime.events.emit('team.memberRemoved', { team, userId });
   }
 
   getRoster(teamId: string): Promise<TeamMember[]> {

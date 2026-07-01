@@ -30,6 +30,8 @@ possible front-ends.
 - **Pluggable storage** — the default is SQLite via Drizzle ORM; the storage layer is an interface,
   so other backends (PostgreSQL, in-memory, …) can be added without touching the domain logic.
 - **Reusable core** — the domain and business rules ship as a standalone, framework-agnostic SDK.
+- **Typed domain events** — subscribe to team and scrimmage changes from the SDK; the bot's own
+  notifications are just listeners.
 
 ## 🧠 How it works
 
@@ -130,14 +132,24 @@ Renaming, deleting, role, logo and roster changes require the team captain or a 
 
 ## 📦 Using the SDK
 
-The matchmaking logic is published as `@scrimmage/core` and can be used on its own:
+The matchmaking logic is published as `@scrimmage/core` and can be used on its own. It even emits
+**typed domain events**, so you can react to what happens without any Discord dependency — the bot's
+own DM notifications are just listeners on this bus:
 
 ```ts
-import { TeamService, ScrimmageService } from '@scrimmage/core';
+import { TeamService, ScrimmageService, TypedEventBus } from '@scrimmage/core';
 import { createSqliteStorage } from '@scrimmage/storage-sqlite';
 
 const storage = createSqliteStorage({ path: './scrimmage.sqlite', migrate: true });
-const teams = new TeamService(storage.teams);
+
+// Subscribe to domain events (fully typed).
+const events = new TypedEventBus();
+events.on('scrimmage.confirmed', ({ scrimmage }) => {
+  console.log(`Scrimmage ${scrimmage.id} is confirmed!`);
+});
+
+const teams = new TeamService(storage.teams, { events });
+const scrimmages = new ScrimmageService(storage.scrimmages, storage.teams, { events });
 
 const redDragons = await teams.createTeam({
   guildId: '123',

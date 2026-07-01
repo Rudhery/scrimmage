@@ -75,7 +75,9 @@ export class ScrimmageService {
       proposedBy: data.proposedBy,
       createdAt: this.runtime.now(),
     };
-    return this.scrimmages.create(scrimmage);
+    const created = await this.scrimmages.create(scrimmage);
+    this.runtime.events.emit('scrimmage.proposed', { scrimmage: created });
+    return created;
   }
 
   async getScrimmage(guildId: string, id: string): Promise<Scrimmage> {
@@ -98,7 +100,12 @@ export class ScrimmageService {
         `Only proposed scrimmages can be confirmed (current status: ${scrimmage.status}).`,
       );
     }
-    return this.scrimmages.update({ ...scrimmage, status: ScrimmageStatus.Confirmed });
+    const updated = await this.scrimmages.update({
+      ...scrimmage,
+      status: ScrimmageStatus.Confirmed,
+    });
+    this.runtime.events.emit('scrimmage.confirmed', { scrimmage: updated });
+    return updated;
   }
 
   /** Cancel a scrimmage that has not been played yet. */
@@ -110,7 +117,12 @@ export class ScrimmageService {
     if (scrimmage.status === ScrimmageStatus.Cancelled) {
       throw new InvalidStateError('This scrimmage is already cancelled.');
     }
-    return this.scrimmages.update({ ...scrimmage, status: ScrimmageStatus.Cancelled });
+    const updated = await this.scrimmages.update({
+      ...scrimmage,
+      status: ScrimmageStatus.Cancelled,
+    });
+    this.runtime.events.emit('scrimmage.cancelled', { scrimmage: updated });
+    return updated;
   }
 
   /** Record the final score, moving a confirmed scrimmage to played. */
@@ -122,10 +134,12 @@ export class ScrimmageService {
         `Only confirmed scrimmages can have a result recorded (current status: ${scrimmage.status}).`,
       );
     }
-    return this.scrimmages.update({
+    const played = await this.scrimmages.update({
       ...scrimmage,
       status: ScrimmageStatus.Played,
       result,
     });
+    this.runtime.events.emit('scrimmage.played', { scrimmage: played });
+    return played;
   }
 }

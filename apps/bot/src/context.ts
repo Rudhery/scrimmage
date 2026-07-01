@@ -1,4 +1,10 @@
-import { ScrimmageService, TeamService, type Storage } from '@scrimmage/core';
+import {
+  ScrimmageService,
+  TeamService,
+  TypedEventBus,
+  type EventBus,
+  type Storage,
+} from '@scrimmage/core';
 import { createSqliteStorage } from '@scrimmage/storage-sqlite';
 import type { Client } from 'discord.js';
 import type { Config } from './config.js';
@@ -12,20 +18,25 @@ export interface AppContext {
   readonly config: Config;
   readonly logger: Logger;
   readonly client: Client;
+  readonly events: EventBus;
   readonly storage: Storage;
   readonly teams: TeamService;
   readonly scrimmages: ScrimmageService;
 }
 
-/** Wire up storage and services from configuration. */
+/** Wire up storage, the domain event bus and services from configuration. */
 export function createContext(config: Config, logger: Logger, client: Client): AppContext {
   const storage = createSqliteStorage({ path: config.databasePath, migrate: true });
+  const events = new TypedEventBus({
+    onError: (error, event) => logger.error({ err: error, event }, 'event listener failed'),
+  });
   return {
     config,
     logger,
     client,
+    events,
     storage,
-    teams: new TeamService(storage.teams),
-    scrimmages: new ScrimmageService(storage.scrimmages, storage.teams),
+    teams: new TeamService(storage.teams, { events }),
+    scrimmages: new ScrimmageService(storage.scrimmages, storage.teams, { events }),
   };
 }

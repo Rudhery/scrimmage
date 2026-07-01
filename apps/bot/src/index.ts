@@ -7,12 +7,14 @@ import { createClient } from './client.js';
 import { commandList, commands } from './commands/index.js';
 import { registerCommands } from './lib/register.js';
 import { handleInteraction } from './events/interaction-create.js';
+import { registerNotifications } from './events/notifications.js';
 
 async function main(): Promise<void> {
   const config = loadConfig();
   const logger = createLogger(config.logLevel);
   const client = createClient();
   const context = createContext(config, logger, client);
+  registerNotifications(context);
 
   client.once(Events.ClientReady, async (ready) => {
     logger.info(`Logged in as ${ready.user.tag}`);

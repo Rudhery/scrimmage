@@ -10,3 +10,12 @@ export * from './errors/index.js';
 
 export { systemClock, uuid, resolveRuntime } from './runtime.js';
 export type { Clock, IdGenerator, ServiceRuntime } from './runtime.js';
+
+export { TypedEventBus, noopEventBus } from './events.js';
+export type {
+  EventBus,
+  EventBusOptions,
+  EventName,
+  EventListener,
+  ScrimmageEvents,
+} from './events.js';
