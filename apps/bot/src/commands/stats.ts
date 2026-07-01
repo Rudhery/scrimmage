@@ -3,7 +3,7 @@ import type { AppContext } from '../context.js';
 import type { Command } from '../lib/command.js';
 import { mvpLine, playerStatsEmbed, statsLeaderboardEmbed } from '../lib/format.js';
 import { PAGE_SIZE, paginate, paginationRow, type PagedView } from '../lib/pagination.js';
-import { requireGuildId } from '../lib/interaction.js';
+import { accentFor, requireGuildId } from '../lib/interaction.js';
 
 export const statsCommand: Command = {
   data: new SlashCommandBuilder()
@@ -40,7 +40,9 @@ async function player(
     context.playerStats.forPlayer(guildId, user.id),
     context.statCategories.list(guildId),
   ]);
-  await interaction.reply({ embeds: [playerStatsEmbed(user.id, aggregate, categories)] });
+  await interaction.reply({
+    embeds: [playerStatsEmbed(user.id, aggregate, categories, await accentFor(context, guildId))],
+  });
 }
 
 /** Render one page of the MVP leaderboard — shared by the command and pagination. */
@@ -59,7 +61,7 @@ export async function renderMvp(
   );
   const row = paginationRow('page:mvp', current, pageCount);
   return {
-    embeds: [statsLeaderboardEmbed(lines, current, pageCount)],
+    embeds: [statsLeaderboardEmbed(lines, current, pageCount, await accentFor(context, guildId))],
     components: row ? [row] : [],
   };
 }

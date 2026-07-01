@@ -11,11 +11,13 @@ function defaults(guildId: string): GuildSettings {
     points: { win: 3, draw: 1, loss: 0 },
     adminRoleId: null,
     reminderLeadMinutes: null,
+    brandColor: null,
   };
 }
 
 const pointSchema = z.number().int().min(0).max(100);
 const leadSchema = z.number().int().min(1).max(1440);
+const colorSchema = z.number().int().min(0).max(0xffffff);
 
 /** Reads and updates per-guild settings, returning sensible defaults when unset. */
 export class GuildSettingsService {
@@ -65,5 +67,12 @@ export class GuildSettingsService {
     const reminderLeadMinutes = minutes === null ? null : parse(leadSchema, minutes);
     const current = await this.get(guildId);
     return this.settings.upsert({ ...current, reminderLeadMinutes });
+  }
+
+  /** Set or clear (with `null`) the embed accent color (0xRRGGBB). */
+  async setBrandColor(guildId: string, color: number | null): Promise<GuildSettings> {
+    const brandColor = color === null ? null : parse(colorSchema, color);
+    const current = await this.get(guildId);
+    return this.settings.upsert({ ...current, brandColor });
   }
 }

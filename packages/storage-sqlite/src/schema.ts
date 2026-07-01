@@ -71,6 +71,7 @@ export const guildSettings = sqliteTable('guild_settings', {
   pointsLoss: integer('points_loss').notNull().default(0),
   adminRoleId: text('admin_role_id'),
   reminderLeadMinutes: integer('reminder_lead_minutes'),
+  brandColor: integer('brand_color'),
 });
 
 export const statCategories = sqliteTable(

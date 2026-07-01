@@ -1,6 +1,7 @@
 import { MessageFlags, PermissionFlagsBits, type ChatInputCommandInteraction } from 'discord.js';
 import type { Team } from '@scrimmage/core';
 import type { AppContext } from '../context.js';
+import { DEFAULT_ACCENT } from './format.js';
 import { DEFAULT_LOCALE, normalizeLocale, translate } from '../i18n/index.js';
 
 /**
@@ -40,6 +41,11 @@ export async function canManageTeam(
   }
   const { adminRoleId } = await context.guildSettings.get(team.guildId);
   return adminRoleId !== null && memberHasRole(interaction, adminRoleId);
+}
+
+/** The guild's embed accent color, or the bot default. */
+export async function accentFor(context: AppContext, guildId: string): Promise<number> {
+  return (await context.guildSettings.get(guildId)).brandColor ?? DEFAULT_ACCENT;
 }
 
 /** Whether the invoking user has the Manage Server permission. */

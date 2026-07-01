@@ -11,7 +11,8 @@ import {
   type TeamStanding,
 } from '@scrimmage/core';
 
-const BRAND_COLOR = 0x5865f2;
+/** Default embed accent when a guild has not set a custom brand color. */
+export const DEFAULT_ACCENT = 0x5865f2;
 
 /** Human label and emoji for each member role. */
 export const ROLE_LABEL: Record<TeamRole, string> = {
@@ -31,7 +32,7 @@ function label(team: Team | null): { name: string; tag: string } {
   return team ? { name: team.name, tag: team.tag } : { name: 'Unknown team', tag: '???' };
 }
 
-export function teamEmbed(team: Team, roster: TeamMember[]): EmbedBuilder {
+export function teamEmbed(team: Team, roster: TeamMember[], accent: number): EmbedBuilder {
   // The captain is shown on its own line, so keep them out of the role groups.
   const inRole = (role: TeamRole): TeamMember[] =>
     roster.filter((member) => member.role === role && member.userId !== team.captainId);
@@ -40,7 +41,7 @@ export function teamEmbed(team: Team, roster: TeamMember[]): EmbedBuilder {
 
   const embed = new EmbedBuilder()
     .setTitle(`${team.name} \`[${team.tag}]\``)
-    .setColor(BRAND_COLOR)
+    .setColor(accent)
     .addFields(
       { name: '👑 Captain', value: `<@${team.captainId}>`, inline: true },
       { name: '👥 Members', value: String(roster.length), inline: true },
@@ -71,8 +72,13 @@ export function teamEmbed(team: Team, roster: TeamMember[]): EmbedBuilder {
   return embed;
 }
 
-export function teamListEmbed(teams: Team[], page: number, pageCount: number): EmbedBuilder {
-  const embed = new EmbedBuilder().setTitle('Teams').setColor(BRAND_COLOR);
+export function teamListEmbed(
+  teams: Team[],
+  page: number,
+  pageCount: number,
+  accent: number,
+): EmbedBuilder {
+  const embed = new EmbedBuilder().setTitle('Teams').setColor(accent);
   embed.setDescription(
     teams.length
       ? teams.map((team) => `**${team.name}** \`[${team.tag}]\``).join('\n')
@@ -88,13 +94,14 @@ export function scrimmageEmbed(
   scrim: Scrimmage,
   home: Team | null,
   away: Team | null,
+  accent: number,
 ): EmbedBuilder {
   const h = label(home);
   const a = label(away);
 
   const embed = new EmbedBuilder()
     .setTitle(`${h.name} vs ${a.name}`)
-    .setColor(BRAND_COLOR)
+    .setColor(accent)
     .addFields(
       { name: 'Status', value: STATUS_LABEL[scrim.status], inline: true },
       {
@@ -128,10 +135,10 @@ function formatGoalDifference(gd: number): string {
   return gd > 0 ? `+${gd}` : String(gd);
 }
 
-export function teamStatsEmbed(team: Team, standing: TeamStanding): EmbedBuilder {
+export function teamStatsEmbed(team: Team, standing: TeamStanding, accent: number): EmbedBuilder {
   const embed = new EmbedBuilder()
     .setTitle(`${team.name} \`[${team.tag}]\` — stats`)
-    .setColor(BRAND_COLOR)
+    .setColor(accent)
     .addFields(
       { name: 'Played', value: String(standing.played), inline: true },
       {
@@ -158,10 +165,15 @@ export function standingLine(rank: number, team: Team | null, standing: TeamStan
   );
 }
 
-export function standingsEmbed(lines: string[], page: number, pageCount: number): EmbedBuilder {
+export function standingsEmbed(
+  lines: string[],
+  page: number,
+  pageCount: number,
+  accent: number,
+): EmbedBuilder {
   const embed = new EmbedBuilder()
     .setTitle('🏆 Standings')
-    .setColor(BRAND_COLOR)
+    .setColor(accent)
     .setDescription(lines.length ? lines.join('\n') : 'No matches have been played yet.');
   if (pageCount > 1) {
     embed.setFooter({ text: `Page ${page + 1}/${pageCount}` });
@@ -174,10 +186,11 @@ export function scrimmageListEmbed(
   status: ScrimmageStatus | null,
   page: number,
   pageCount: number,
+  accent: number,
 ): EmbedBuilder {
   const embed = new EmbedBuilder()
     .setTitle(status ? `Scrimmages — ${STATUS_LABEL[status]}` : 'Scrimmages')
-    .setColor(BRAND_COLOR)
+    .setColor(accent)
     .setDescription(lines.length ? lines.join('\n\n') : 'No scrimmages found.');
   if (pageCount > 1) {
     embed.setFooter({ text: `Page ${page + 1}/${pageCount}` });
@@ -200,10 +213,11 @@ export function statsLeaderboardEmbed(
   lines: string[],
   page: number,
   pageCount: number,
+  accent: number,
 ): EmbedBuilder {
   const embed = new EmbedBuilder()
     .setTitle('🏐 MVP leaderboard')
-    .setColor(BRAND_COLOR)
+    .setColor(accent)
     .setDescription(lines.length ? lines.join('\n') : 'No player stats recorded yet.');
   if (pageCount > 1) {
     embed.setFooter({ text: `Page ${page + 1}/${pageCount}` });
@@ -215,10 +229,11 @@ export function playerStatsEmbed(
   userId: string,
   aggregate: PlayerAggregate | null,
   categories: StatCategory[],
+  accent: number,
 ): EmbedBuilder {
   const embed = new EmbedBuilder()
     .setTitle('Player stats')
-    .setColor(BRAND_COLOR)
+    .setColor(accent)
     .setDescription(`<@${userId}>`);
   if (!aggregate) {
     embed.addFields({ name: 'No stats yet', value: 'This player has no recorded stats.' });
@@ -237,8 +252,12 @@ export function playerStatsEmbed(
   return embed;
 }
 
-export function scrimSheetEmbed(lines: PlayerStatLine[], categories: StatCategory[]): EmbedBuilder {
-  const embed = new EmbedBuilder().setTitle('📋 Match stat sheet').setColor(BRAND_COLOR);
+export function scrimSheetEmbed(
+  lines: PlayerStatLine[],
+  categories: StatCategory[],
+  accent: number,
+): EmbedBuilder {
+  const embed = new EmbedBuilder().setTitle('📋 Match stat sheet').setColor(accent);
   if (lines.length === 0) {
     embed.setDescription('No stats recorded for this scrimmage yet. Use `/scrim stat`.');
     return embed;

@@ -22,6 +22,7 @@ export class DrizzleGuildSettingsRepository implements GuildSettingsRepository {
       points: { win: row.pointsWin, draw: row.pointsDraw, loss: row.pointsLoss },
       adminRoleId: row.adminRoleId,
       reminderLeadMinutes: row.reminderLeadMinutes,
+      brandColor: row.brandColor,
     };
   }
 
@@ -35,6 +36,7 @@ export class DrizzleGuildSettingsRepository implements GuildSettingsRepository {
       pointsLoss: settings.points.loss,
       adminRoleId: settings.adminRoleId,
       reminderLeadMinutes: settings.reminderLeadMinutes,
+      brandColor: settings.brandColor,
     };
     this.db
       .insert(guildSettings)
@@ -49,6 +51,7 @@ export class DrizzleGuildSettingsRepository implements GuildSettingsRepository {
           pointsLoss: values.pointsLoss,
           adminRoleId: values.adminRoleId,
           reminderLeadMinutes: values.reminderLeadMinutes,
+          brandColor: values.brandColor,
         },
       })
       .run();

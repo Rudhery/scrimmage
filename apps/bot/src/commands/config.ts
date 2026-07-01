@@ -69,6 +69,12 @@ export const configCommand: Command = {
             .setMinValue(1)
             .setMaxValue(1440),
         ),
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName('color')
+        .setDescription('Set the embed brand color (hex, leave empty to reset).')
+        .addStringOption((opt) => opt.setName('hex').setDescription('Hex color, e.g. #5865F2')),
     ),
 
   async execute(interaction, context) {
@@ -93,6 +99,10 @@ export const configCommand: Command = {
         settings.reminderLeadMinutes !== null
           ? translate(locale, 'config.reminderMinutes', { minutes: settings.reminderLeadMinutes })
           : translate(locale, 'config.reminderDefault');
+      const color =
+        settings.brandColor !== null
+          ? `#${settings.brandColor.toString(16).padStart(6, '0')}`
+          : translate(locale, 'config.color.default');
       await interaction.reply({
         content:
           `**${translate(locale, 'config.title')}**\n` +
@@ -100,7 +110,8 @@ export const configCommand: Command = {
           `• ${translate(locale, 'config.languageLabel')}: ${language}\n` +
           `• ${translate(locale, 'config.pointsLabel')}: ${points}\n` +
           `• ${translate(locale, 'config.adminRoleLabel')}: ${adminRole}\n` +
-          `• ${translate(locale, 'config.reminderLabel')}: ${reminder}`,
+          `• ${translate(locale, 'config.reminderLabel')}: ${reminder}\n` +
+          `• ${translate(locale, 'config.colorLabel')}: ${color}`,
         flags: MessageFlags.Ephemeral,
         allowedMentions: { parse: [] },
       });
@@ -156,6 +167,27 @@ export const configCommand: Command = {
           minutes !== null
             ? translate(locale, 'config.reminder.set', { minutes })
             : translate(locale, 'config.reminder.cleared'),
+        );
+        return;
+      }
+      case 'color': {
+        const hex = interaction.options.getString('hex');
+        if (!hex) {
+          await context.guildSettings.setBrandColor(guildId, null);
+          await interaction.reply(translate(locale, 'config.color.cleared'));
+          return;
+        }
+        const normalized = hex.replace(/^#/, '');
+        if (!/^[0-9a-fA-F]{6}$/.test(normalized)) {
+          await interaction.reply({
+            content: translate(locale, 'config.color.invalid'),
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+        await context.guildSettings.setBrandColor(guildId, Number.parseInt(normalized, 16));
+        await interaction.reply(
+          translate(locale, 'config.color.set', { hex: normalized.toUpperCase() }),
         );
         return;
       }

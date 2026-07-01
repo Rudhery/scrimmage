@@ -2,7 +2,8 @@ import { time, TimestampStyles } from 'discord.js';
 import type { Scrimmage, Team } from '@scrimmage/core';
 import type { AppContext } from '../context.js';
 import { dmUser, dmUsers } from '../lib/notify.js';
-import { ROLE_LABEL, scrimmageEmbed } from '../lib/format.js';
+import { DEFAULT_ACCENT, ROLE_LABEL, scrimmageEmbed } from '../lib/format.js';
+import { accentFor } from '../lib/interaction.js';
 
 /**
  * Subscribe the bot's DM notifications to the core's domain events. This is the
@@ -23,10 +24,11 @@ export function registerNotifications(context: AppContext): void {
 
   const announceScrim = async (scrimmage: Scrimmage, headline: string): Promise<void> => {
     const [home, away] = await resolveScrimTeams(scrimmage);
+    const accent = await accentFor(context, scrimmage.guildId);
     await dmUsers(
       client,
       captainsOf(home, away),
-      { content: headline, embeds: [scrimmageEmbed(scrimmage, home, away)] },
+      { content: headline, embeds: [scrimmageEmbed(scrimmage, home, away, accent)] },
       logger,
     );
   };
@@ -47,11 +49,11 @@ export function registerNotifications(context: AppContext): void {
   events.on('scrimmage.reminderDue', async ({ scrimmage }) => {
     const [home, away] = await resolveScrimTeams(scrimmage);
     const captains = captainsOf(home, away);
-    const embed = scrimmageEmbed(scrimmage, home, away);
+    const settings = await guildSettings.get(scrimmage.guildId);
+    const embed = scrimmageEmbed(scrimmage, home, away, settings.brandColor ?? DEFAULT_ACCENT);
     const kickoff = time(scrimmage.scheduledAt, TimestampStyles.RelativeTime);
 
     // Announce in the configured channel, falling back to the one it was proposed in.
-    const settings = await guildSettings.get(scrimmage.guildId);
     const targetChannelId = settings.announceChannelId ?? scrimmage.channelId;
     if (targetChannelId) {
       try {

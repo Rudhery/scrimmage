@@ -12,6 +12,7 @@ describe('GuildSettingsService', () => {
       points: { win: 3, draw: 1, loss: 0 },
       adminRoleId: null,
       reminderLeadMinutes: null,
+      brandColor: null,
     });
   });
 

@@ -19,7 +19,7 @@ import {
   scrimmageListEmbed,
 } from '../lib/format.js';
 import { paginate, paginationRow, type PagedView } from '../lib/pagination.js';
-import { requireGuildId } from '../lib/interaction.js';
+import { accentFor, requireGuildId } from '../lib/interaction.js';
 import {
   respondScrimmageIds,
   respondStatCategories,
@@ -244,7 +244,7 @@ async function propose(
   });
   await interaction.reply({
     content: '📋 Scrimmage proposed!',
-    embeds: [scrimmageEmbed(scrim, home, away)],
+    embeds: [scrimmageEmbed(scrim, home, away, await accentFor(context, guildId))],
     components: [scrimActionRow(scrim.id)],
   });
 }
@@ -259,7 +259,9 @@ async function info(
     interaction.options.getString('id', true),
   );
   const [home, away] = await resolveTeams(context, guildId, scrim.homeTeamId, scrim.awayTeamId);
-  await interaction.reply({ embeds: [scrimmageEmbed(scrim, home, away)] });
+  await interaction.reply({
+    embeds: [scrimmageEmbed(scrim, home, away, await accentFor(context, guildId))],
+  });
 }
 
 async function confirm(
@@ -306,7 +308,7 @@ async function result(
   const [home, away] = await resolveTeams(context, guildId, scrim.homeTeamId, scrim.awayTeamId);
   await interaction.reply({
     content: '🏁 Result recorded!',
-    embeds: [scrimmageEmbed(scrim, home, away)],
+    embeds: [scrimmageEmbed(scrim, home, away, await accentFor(context, guildId))],
   });
 }
 
@@ -337,7 +339,9 @@ export async function renderScrimList(
 
   const row = paginationRow(`page:scrim:${status ?? 'all'}`, current, pageCount);
   return {
-    embeds: [scrimmageListEmbed(lines, status, current, pageCount)],
+    embeds: [
+      scrimmageListEmbed(lines, status, current, pageCount, await accentFor(context, guildId)),
+    ],
     components: row ? [row] : [],
   };
 }
@@ -358,7 +362,10 @@ async function applyScrimAction(
       : await context.scrimmages.cancel(guildId, scrimId);
   const [home, away] = await resolveTeams(context, guildId, scrim.homeTeamId, scrim.awayTeamId);
   const content = action === 'confirm' ? '🟢 Scrimmage confirmed!' : '🔴 Scrimmage cancelled.';
-  return { content, embeds: [scrimmageEmbed(scrim, home, away)] };
+  return {
+    content,
+    embeds: [scrimmageEmbed(scrim, home, away, await accentFor(context, guildId))],
+  };
 }
 
 const BUTTON_NAMESPACE = 'scrim';
@@ -437,7 +444,9 @@ async function sheet(
     context.playerStats.forScrimmage(scrim.id),
     context.statCategories.list(guildId),
   ]);
-  await interaction.reply({ embeds: [scrimSheetEmbed(lines, categories)] });
+  await interaction.reply({
+    embeds: [scrimSheetEmbed(lines, categories, await accentFor(context, guildId))],
+  });
 }
 
 /** Best-effort: which of the scrimmage's two teams is the player on. */

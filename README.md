@@ -32,7 +32,7 @@ possible front-ends.
   preset) and get a weighted MVP leaderboard.
 - **Multi-language** — English, Português (BR) and Español, chosen per server (`/config language`)
   or from each user's Discord locale.
-- **Customizable** — per-server points system, a scrim-admin role, and a custom reminder lead time.
+- **Customizable** — per-server points system, brand color, scrim-admin role, and reminder lead time.
 - **Server-scoped** — every team and match belongs to the guild it was created in.
 - **Pluggable storage** — the default is SQLite via Drizzle ORM; the storage layer is an interface,
   so other backends (PostgreSQL, in-memory, …) can be added without touching the domain logic.
@@ -151,6 +151,7 @@ For Docker and production deployment, see the [deployment guide](./docs/DEPLOYME
 | `/config points <w> <d> <l>`          | Set points for win/draw/loss.                |
 | `/config admin-role [role]`           | Set/clear a scrim-admin role.                |
 | `/config reminder [minutes]`          | Set/clear the reminder lead time.            |
+| `/config color [hex]`                 | Set/clear the embed brand color.             |
 
 Teams have a **captain**, **coaches**, **assistants**, **players** and an optional **crest/logo**.
 `/team create` opens a **modal form**, team and scrimmage options offer **autocomplete**, and a

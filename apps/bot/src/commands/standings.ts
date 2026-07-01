@@ -3,7 +3,7 @@ import type { AppContext } from '../context.js';
 import type { Command } from '../lib/command.js';
 import { standingLine, standingsEmbed } from '../lib/format.js';
 import { PAGE_SIZE, paginate, paginationRow, type PagedView } from '../lib/pagination.js';
-import { requireGuildId } from '../lib/interaction.js';
+import { accentFor, requireGuildId } from '../lib/interaction.js';
 
 export const standingsCommand: Command = {
   data: new SlashCommandBuilder()
@@ -38,5 +38,8 @@ export async function renderStandings(
   );
 
   const row = paginationRow('page:standings', current, pageCount);
-  return { embeds: [standingsEmbed(lines, current, pageCount)], components: row ? [row] : [] };
+  return {
+    embeds: [standingsEmbed(lines, current, pageCount, await accentFor(context, guildId))],
+    components: row ? [row] : [],
+  };
 }

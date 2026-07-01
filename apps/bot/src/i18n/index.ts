@@ -36,6 +36,11 @@ const en = {
   'config.adminRole.cleared': '🛡️ Scrim admin role cleared.',
   'config.reminder.set': '⏰ Reminder lead set to {minutes} minutes.',
   'config.reminder.cleared': '⏰ Reminder lead now uses the bot default.',
+  'config.colorLabel': 'Brand color',
+  'config.color.default': 'default',
+  'config.color.set': '🎨 Brand color set to #{hex}.',
+  'config.color.cleared': '🎨 Brand color reset to the default.',
+  'config.color.invalid': '❌ Invalid color. Use a hex code like #5865F2.',
 } satisfies Record<string, string>;
 
 export type MessageKey = keyof typeof en;

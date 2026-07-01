@@ -18,4 +18,6 @@ export interface GuildSettings {
   readonly adminRoleId: string | null;
   /** Minutes before kickoff to remind, or `null` to use the bot default. */
   readonly reminderLeadMinutes: number | null;
+  /** Accent color (0xRRGGBB) for embeds, or `null` for the bot default. */
+  readonly brandColor: number | null;
 }

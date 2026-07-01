@@ -13,7 +13,7 @@ import type { AppContext } from '../context.js';
 import type { Command } from '../lib/command.js';
 import { ROLE_LABEL, teamEmbed, teamListEmbed, teamStatsEmbed } from '../lib/format.js';
 import { paginate, paginationRow, type PagedView } from '../lib/pagination.js';
-import { canManageTeam, requireGuildId } from '../lib/interaction.js';
+import { accentFor, canManageTeam, requireGuildId } from '../lib/interaction.js';
 import { respondTeamNames } from '../lib/autocomplete.js';
 
 const PERMISSION_DENIED = '❌ Only the team captain or a server manager can do that.';
@@ -295,7 +295,7 @@ export async function handleTeamModal(
   const roster = await context.teams.getRoster(team.id);
   await interaction.reply({
     content: `✅ Created **${team.name}**.`,
-    embeds: [teamEmbed(team, roster)],
+    embeds: [teamEmbed(team, roster, await accentFor(context, guildId))],
   });
 }
 
@@ -337,7 +337,7 @@ export async function renderTeamList(
   } = paginate(await context.teams.listTeams(guildId), page);
   const row = paginationRow('page:team', current, pageCount);
   return {
-    embeds: [teamListEmbed(items, current, pageCount)],
+    embeds: [teamListEmbed(items, current, pageCount, await accentFor(context, guildId))],
     components: row ? [row] : [],
   };
 }
@@ -352,7 +352,9 @@ async function teamInfo(
     interaction.options.getString('team', true),
   );
   const roster = await context.teams.getRoster(team.id);
-  await interaction.reply({ embeds: [teamEmbed(team, roster)] });
+  await interaction.reply({
+    embeds: [teamEmbed(team, roster, await accentFor(context, guildId))],
+  });
 }
 
 async function teamStats(
@@ -365,7 +367,9 @@ async function teamStats(
     interaction.options.getString('team', true),
   );
   const standing = await context.standings.forTeam(guildId, team.id);
-  await interaction.reply({ embeds: [teamStatsEmbed(team, standing)] });
+  await interaction.reply({
+    embeds: [teamStatsEmbed(team, standing, await accentFor(context, guildId))],
+  });
 }
 
 async function renameTeam(
@@ -407,7 +411,7 @@ async function transferCaptain(
   const roster = await context.teams.getRoster(updated.id);
   await interaction.reply({
     content: `👑 <@${user.id}> is now the captain of **${updated.name}**.`,
-    embeds: [teamEmbed(updated, roster)],
+    embeds: [teamEmbed(updated, roster, await accentFor(context, guildId))],
   });
 }
 
@@ -435,7 +439,7 @@ async function setLogo(
     content: updated.logoUrl
       ? `🛡️ Updated the crest for **${updated.name}**.`
       : `🛡️ Cleared the crest for **${updated.name}**.`,
-    embeds: [teamEmbed(updated, roster)],
+    embeds: [teamEmbed(updated, roster, await accentFor(context, guildId))],
   });
 }
 
@@ -457,7 +461,7 @@ async function linkRole(
   const roster = await context.teams.getRoster(updated.id);
   await interaction.reply({
     content: `🎽 Linked <@&${role.id}> to **${updated.name}**.`,
-    embeds: [teamEmbed(updated, roster)],
+    embeds: [teamEmbed(updated, roster, await accentFor(context, guildId))],
     allowedMentions: { parse: [] },
   });
 }
