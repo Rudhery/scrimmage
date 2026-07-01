@@ -3,7 +3,12 @@ import type { Collection } from 'discord.js';
 import type { AppContext } from '../context.js';
 import type { Command } from '../lib/command.js';
 import { toUserMessage } from '../lib/errors.js';
-import { handleScrimButton, isScrimButton } from '../commands/scrim.js';
+import {
+  handleRsvpButton,
+  handleScrimButton,
+  isRsvpButton,
+  isScrimButton,
+} from '../commands/scrim.js';
 import { handleTeamModal, isTeamModal } from '../commands/team.js';
 import { handlePaginationButton, isPaginationButton } from './pagination.js';
 
@@ -30,6 +35,8 @@ export async function handleInteraction(
     try {
       if (isScrimButton(interaction.customId)) {
         await handleScrimButton(interaction, context);
+      } else if (isRsvpButton(interaction.customId)) {
+        await handleRsvpButton(interaction, context);
       } else if (isPaginationButton(interaction.customId)) {
         await handlePaginationButton(interaction, context);
       }

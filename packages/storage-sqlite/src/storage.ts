@@ -3,6 +3,7 @@ import { createConnection } from './client.js';
 import { applyMigrations } from './migrator.js';
 import { DrizzleGuildSettingsRepository } from './repositories/guild-settings-repository.js';
 import { DrizzlePlayerStatsRepository } from './repositories/player-stats-repository.js';
+import { DrizzleRsvpRepository } from './repositories/rsvp-repository.js';
 import { DrizzleScrimmageRepository } from './repositories/scrimmage-repository.js';
 import { DrizzleStatCategoryRepository } from './repositories/stat-category-repository.js';
 import { DrizzleTeamRepository } from './repositories/team-repository.js';
@@ -30,6 +31,7 @@ export function createSqliteStorage(options: SqliteStorageOptions): Storage {
     guildSettings: new DrizzleGuildSettingsRepository(db),
     statCategories: new DrizzleStatCategoryRepository(db),
     playerStats: new DrizzlePlayerStatsRepository(db),
+    rsvps: new DrizzleRsvpRepository(db),
     close() {
       sqlite.close();
     },

@@ -1,9 +1,11 @@
 import { EmbedBuilder, time, TimestampStyles } from 'discord.js';
 import {
+  RsvpStatus,
   ScrimmageStatus,
   TeamRole,
   type PlayerAggregate,
   type PlayerStatLine,
+  type Rsvp,
   type Scrimmage,
   type StatCategory,
   type Team,
@@ -119,6 +121,33 @@ export function scrimmageEmbed(
     });
   }
   return embed;
+}
+
+export function rsvpEmbed(
+  scrim: Scrimmage,
+  home: Team | null,
+  away: Team | null,
+  rsvps: Rsvp[],
+  accent: number,
+): EmbedBuilder {
+  const h = label(home);
+  const a = label(away);
+  const list = (status: RsvpStatus): string => {
+    const users = rsvps.filter((rsvp) => rsvp.status === status);
+    return users.length ? users.map((rsvp) => `<@${rsvp.userId}>`).join(', ') : '—';
+  };
+  const count = (status: RsvpStatus): number =>
+    rsvps.filter((rsvp) => rsvp.status === status).length;
+
+  return new EmbedBuilder()
+    .setTitle(`${h.name} vs ${a.name} — RSVP`)
+    .setColor(accent)
+    .addFields(
+      { name: `✅ Going (${count(RsvpStatus.Going)})`, value: list(RsvpStatus.Going) },
+      { name: `🤔 Maybe (${count(RsvpStatus.Maybe)})`, value: list(RsvpStatus.Maybe) },
+      { name: `❌ Can't (${count(RsvpStatus.Declined)})`, value: list(RsvpStatus.Declined) },
+    )
+    .setFooter({ text: `Scrimmage ID: ${scrim.id}` });
 }
 
 export function scrimmageLine(scrim: Scrimmage, home: Team | null, away: Team | null): string {

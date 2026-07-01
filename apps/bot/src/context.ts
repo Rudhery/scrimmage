@@ -1,6 +1,7 @@
 import {
   GuildSettingsService,
   PlayerStatsService,
+  RsvpService,
   ScrimmageService,
   StandingsService,
   StatCategoryService,
@@ -30,6 +31,7 @@ export interface AppContext {
   readonly guildSettings: GuildSettingsService;
   readonly statCategories: StatCategoryService;
   readonly playerStats: PlayerStatsService;
+  readonly rsvps: RsvpService;
 }
 
 /** Wire up storage, the domain event bus and services from configuration. */
@@ -52,5 +54,6 @@ export function createContext(config: Config, logger: Logger, client: Client): A
     guildSettings,
     statCategories,
     playerStats: new PlayerStatsService(storage.playerStats, statCategories),
+    rsvps: new RsvpService(storage.rsvps),
   };
 }

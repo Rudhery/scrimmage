@@ -102,3 +102,16 @@ export const playerStats = sqliteTable(
     index('player_stats_guild_idx').on(table.guildId),
   ],
 );
+
+export const rsvps = sqliteTable(
+  'rsvps',
+  {
+    scrimmageId: text('scrimmage_id')
+      .notNull()
+      .references(() => scrimmages.id, { onDelete: 'cascade' }),
+    guildId: text('guild_id').notNull(),
+    userId: text('user_id').notNull(),
+    status: text('status').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.scrimmageId, table.userId] })],
+);

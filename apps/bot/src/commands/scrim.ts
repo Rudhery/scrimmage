@@ -8,11 +8,12 @@ import {
   type ChatInputCommandInteraction,
   type EmbedBuilder,
 } from 'discord.js';
-import { ScrimmageStatus, type Scrimmage, type Team } from '@scrimmage/core';
+import { RsvpStatus, ScrimmageStatus, type Scrimmage, type Team } from '@scrimmage/core';
 import type { AppContext } from '../context.js';
 import type { Command } from '../lib/command.js';
 import { parseSchedule } from '../lib/time.js';
 import {
+  rsvpEmbed,
   scrimSheetEmbed,
   scrimmageEmbed,
   scrimmageLine,
@@ -137,6 +138,14 @@ export const scrimCommand: Command = {
         .addStringOption((opt) =>
           opt.setName('id').setDescription('Scrimmage').setRequired(true).setAutocomplete(true),
         ),
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName('rsvp')
+        .setDescription('Open the attendance (RSVP) panel for a scrimmage.')
+        .addStringOption((opt) =>
+          opt.setName('id').setDescription('Scrimmage').setRequired(true).setAutocomplete(true),
+        ),
     ),
 
   async execute(interaction, context) {
@@ -169,6 +178,11 @@ export const scrimCommand: Command = {
         return;
       case 'sheet':
         await sheet(interaction, context, guildId);
+        return;
+      case 'rsvp':
+        await interaction.reply(
+          await renderRsvp(context, guildId, interaction.options.getString('id', true)),
+        );
         return;
     }
   },
@@ -462,6 +476,69 @@ async function inferTeamId(context: AppContext, scrim: Scrimmage, userId: string
     return scrim.awayTeamId;
   }
   return '';
+}
+
+const RSVP_NAMESPACE = 'rsvp';
+
+function rsvpActionRow(scrimId: string): ActionRowBuilder<ButtonBuilder> {
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`${RSVP_NAMESPACE}:${RsvpStatus.Going}:${scrimId}`)
+      .setLabel('Going')
+      .setStyle(ButtonStyle.Success),
+    new ButtonBuilder()
+      .setCustomId(`${RSVP_NAMESPACE}:${RsvpStatus.Maybe}:${scrimId}`)
+      .setLabel('Maybe')
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId(`${RSVP_NAMESPACE}:${RsvpStatus.Declined}:${scrimId}`)
+      .setLabel("Can't")
+      .setStyle(ButtonStyle.Danger),
+  );
+}
+
+/** Render the RSVP panel — shared by the command and the buttons. */
+export async function renderRsvp(
+  context: AppContext,
+  guildId: string,
+  scrimId: string,
+): Promise<PagedView> {
+  const scrim = await context.scrimmages.getScrimmage(guildId, scrimId);
+  const [home, away] = await resolveTeams(context, guildId, scrim.homeTeamId, scrim.awayTeamId);
+  const [rsvps, accent] = await Promise.all([
+    context.rsvps.forScrimmage(scrim.id),
+    accentFor(context, guildId),
+  ]);
+  return {
+    embeds: [rsvpEmbed(scrim, home, away, rsvps, accent)],
+    components: [rsvpActionRow(scrim.id)],
+  };
+}
+
+function isRsvpStatus(value: string | undefined): value is RsvpStatus {
+  return value === RsvpStatus.Going || value === RsvpStatus.Maybe || value === RsvpStatus.Declined;
+}
+
+/** Whether a button belongs to the RSVP panel. */
+export function isRsvpButton(customId: string): boolean {
+  return customId.startsWith(`${RSVP_NAMESPACE}:`);
+}
+
+/** Handle a Going/Maybe/Can't click, updating the panel in place. */
+export async function handleRsvpButton(
+  interaction: ButtonInteraction,
+  context: AppContext,
+): Promise<void> {
+  const guildId = interaction.guildId;
+  if (!guildId) {
+    return;
+  }
+  const [, status, scrimId] = interaction.customId.split(':');
+  if (!isRsvpStatus(status) || !scrimId) {
+    return;
+  }
+  await context.rsvps.setStatus(scrimId, guildId, interaction.user.id, status);
+  await interaction.update(await renderRsvp(context, guildId, scrimId));
 }
 
 /** Resolve both teams of a scrimmage, tolerating teams that were deleted. */

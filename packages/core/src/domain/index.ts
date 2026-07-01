@@ -6,3 +6,5 @@ export type { TeamStanding } from './standing.js';
 export type { GuildSettings, PointsConfig } from './guild-settings.js';
 export type { StatCategory, PlayerStatLine, PlayerAggregate } from './stats.js';
 export { VOLLEYBALL_PRESET } from './stats.js';
+export type { Rsvp } from './rsvp.js';
+export { RsvpStatus } from './rsvp.js';

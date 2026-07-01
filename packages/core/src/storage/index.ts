@@ -5,5 +5,6 @@ export type {
   GuildSettingsRepository,
   StatCategoryRepository,
   PlayerStatsRepository,
+  RsvpRepository,
   Storage,
 } from './repositories.js';
