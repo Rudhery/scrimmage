@@ -10,5 +10,7 @@ export type { Rsvp } from './rsvp.js';
 export { RsvpStatus } from './rsvp.js';
 export type { AvailabilityPoll, PollVote } from './poll.js';
 export type { BotPresence } from './bot-presence.js';
+export type { ScrimmageAward } from './scrimmage-award.js';
+export { AwardCategory } from './scrimmage-award.js';
 export type { Championship, ChampionshipTeam, Match, MatchSet } from './championship.js';
 export { ChampionshipStatus, ChampionshipFormat, MatchStatus, setsToWin } from './championship.js';

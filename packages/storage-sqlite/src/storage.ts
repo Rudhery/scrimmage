@@ -8,6 +8,7 @@ import { DrizzlePlayerStatsRepository } from './repositories/player-stats-reposi
 import { DrizzlePollRepository } from './repositories/poll-repository.js';
 import { DrizzleRsvpRepository } from './repositories/rsvp-repository.js';
 import { DrizzleScrimmageRepository } from './repositories/scrimmage-repository.js';
+import { DrizzleScrimmageAwardRepository } from './repositories/scrimmage-award-repository.js';
 import { DrizzleStatCategoryRepository } from './repositories/stat-category-repository.js';
 import { DrizzleTeamRepository } from './repositories/team-repository.js';
 
@@ -38,6 +39,7 @@ export function createSqliteStorage(options: SqliteStorageOptions): Storage {
     polls: new DrizzlePollRepository(db),
     championships: new DrizzleChampionshipRepository(db),
     botPresence: new DrizzleBotPresenceRepository(db),
+    scrimmageAwards: new DrizzleScrimmageAwardRepository(db),
     close() {
       sqlite.close();
     },

@@ -26,6 +26,12 @@ export interface TeamRef {
   tag: string;
 }
 
+export interface ScrimmageAwards {
+  offensive: string | null;
+  defensive: string | null;
+  overall: string | null;
+}
+
 export interface Scrimmage {
   id: string;
   guildId: string;
@@ -40,6 +46,7 @@ export interface Scrimmage {
   createdAt: string;
   homeTeam: TeamRef | null;
   awayTeam: TeamRef | null;
+  awards?: ScrimmageAwards;
 }
 
 export interface Standing {
@@ -136,6 +143,71 @@ export function useScrimmages(
       const query = status === 'all' ? '' : `?status=${status}`;
       return getJson<Scrimmage[]>(`/api/guilds/${encodeURIComponent(guildId)}/scrimmages${query}`);
     },
+  });
+}
+
+export interface ScheduleScrimInput {
+  homeTeamId: string;
+  awayTeamId: string;
+  scheduledAt: string;
+}
+
+function invalidateScrims(queryClient: ReturnType<typeof useQueryClient>, guildId: string): void {
+  void queryClient.invalidateQueries({ queryKey: ['scrimmages', guildId] });
+  void queryClient.invalidateQueries({ queryKey: ['overview', guildId] });
+}
+
+export function useScheduleScrim(
+  guildId: string,
+): UseMutationResult<Scrimmage, Error, ScheduleScrimInput> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ScheduleScrimInput) =>
+      sendJson<Scrimmage>(`/api/guilds/${encodeURIComponent(guildId)}/scrimmages`, 'POST', input),
+    onSuccess: () => invalidateScrims(queryClient, guildId),
+  });
+}
+
+export function useRecordScrimResult(
+  guildId: string,
+): UseMutationResult<Scrimmage, Error, { id: string; homeScore: number; awayScore: number }> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, homeScore, awayScore }) =>
+      sendJson<Scrimmage>(
+        `/api/guilds/${encodeURIComponent(guildId)}/scrimmages/${encodeURIComponent(id)}/result`,
+        'POST',
+        { homeScore, awayScore },
+      ),
+    onSuccess: () => invalidateScrims(queryClient, guildId),
+  });
+}
+
+export function useCancelScrim(guildId: string): UseMutationResult<Scrimmage, Error, string> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      sendJson<Scrimmage>(
+        `/api/guilds/${encodeURIComponent(guildId)}/scrimmages/${encodeURIComponent(id)}/cancel`,
+        'POST',
+        {},
+      ),
+    onSuccess: () => invalidateScrims(queryClient, guildId),
+  });
+}
+
+export function useSetScrimAwards(
+  guildId: string,
+): UseMutationResult<ScrimmageAwards, Error, { id: string } & Partial<ScrimmageAwards>> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...awards }) =>
+      sendJson<ScrimmageAwards>(
+        `/api/guilds/${encodeURIComponent(guildId)}/scrimmages/${encodeURIComponent(id)}/awards`,
+        'PUT',
+        awards,
+      ),
+    onSuccess: () => invalidateScrims(queryClient, guildId),
   });
 }
 
@@ -264,6 +336,26 @@ export function useCreateTeam(guildId: string): UseMutationResult<Team, Error, C
   return useMutation({
     mutationFn: (input: CreateTeamInput) =>
       sendJson<Team>(`/api/guilds/${guildKey(guildId)}/teams`, 'POST', input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['teams', guildId] }),
+  });
+}
+
+export interface UpdateTeamInput {
+  teamId: string;
+  name?: string;
+  tag?: string;
+  logoUrl?: string | null;
+}
+
+export function useUpdateTeam(guildId: string): UseMutationResult<Team, Error, UpdateTeamInput> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ teamId, ...patch }: UpdateTeamInput) =>
+      sendJson<Team>(
+        `/api/guilds/${guildKey(guildId)}/teams/${encodeURIComponent(teamId)}`,
+        'PATCH',
+        patch,
+      ),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['teams', guildId] }),
   });
 }

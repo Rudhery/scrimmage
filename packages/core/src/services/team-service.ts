@@ -6,17 +6,18 @@ import { resolveRuntime, type ServiceRuntime } from '../runtime.js';
 import { parse } from '../validation.js';
 
 const teamNameSchema = z.string().trim().min(2).max(50);
+const teamTagSchema = z
+  .string()
+  .trim()
+  .min(2)
+  .max(5)
+  .regex(/^[A-Za-z0-9]+$/, 'Tag must contain only letters and numbers.');
 const logoUrlSchema = z.string().trim().url('The logo must be a valid URL.').max(500);
 
 const createTeamSchema = z.object({
   guildId: z.string().min(1),
   name: teamNameSchema,
-  tag: z
-    .string()
-    .trim()
-    .min(2)
-    .max(5)
-    .regex(/^[A-Za-z0-9]+$/, 'Tag must contain only letters and numbers.'),
+  tag: teamTagSchema,
   captainId: z.string().min(1),
   description: z.string().trim().max(300).optional(),
   logoUrl: logoUrlSchema.optional(),
@@ -110,6 +111,17 @@ export class TeamService {
     const renamed = await this.teams.update({ ...team, name });
     this.runtime.events.emit('team.renamed', { team: renamed, previousName: team.name });
     return renamed;
+  }
+
+  /** Change a team's tag (2–5 letters/numbers), stored uppercase. */
+  async setTeamTag(guildId: string, teamId: string, tag: string): Promise<Team> {
+    const team = await this.getTeam(guildId, teamId);
+    const updated = await this.teams.update({
+      ...team,
+      tag: parse(teamTagSchema, tag).toUpperCase(),
+    });
+    this.runtime.events.emit('team.renamed', { team: updated, previousName: team.name });
+    return updated;
   }
 
   /** Set (or clear, with `null`) the team crest/logo URL. */

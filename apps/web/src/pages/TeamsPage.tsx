@@ -1,7 +1,10 @@
 import { useState, type FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
-import { useCanManage, useCreateTeam, useTeams } from '../api';
+import { useCanManage, useCreateTeam, useTeams, useUpdateTeam, type Team } from '../api';
 import { Crest, Panel, SectionTitle, StateBlock } from '../components/ui';
+
+const ghostButton =
+  'rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-muted transition hover:text-fg';
 
 const inputClass =
   'w-full rounded-lg border border-line bg-surface2 px-3 py-2 text-sm text-fg outline-none focus:border-lime/60';
@@ -35,33 +38,120 @@ export default function TeamsPage() {
       {data && data.length > 0 ? (
         <div className="grid gap-3 sm:grid-cols-2">
           {data.map((team, index) => (
-            <Panel
+            <TeamCard
               key={team.id}
-              className="rise flex items-center gap-4 p-4 transition hover:border-lime/40"
-              style={{ animationDelay: `${index * 40}ms` }}
-            >
-              {team.logoUrl ? (
-                <img
-                  src={team.logoUrl}
-                  alt=""
-                  className="h-12 w-12 shrink-0 rounded-xl border border-line object-cover"
-                />
-              ) : (
-                <Crest tag={team.tag} />
-              )}
-              <div className="min-w-0">
-                <p className="truncate font-semibold">
-                  {team.name} <span className="font-mono text-xs text-muted">[{team.tag}]</span>
-                </p>
-                <p className="truncate text-sm text-muted">
-                  {team.description ?? 'No description'}
-                </p>
-              </div>
-            </Panel>
+              team={team}
+              index={index}
+              guildId={guildId}
+              canManage={canManage}
+            />
           ))}
         </div>
       ) : null}
     </section>
+  );
+}
+
+function TeamCard({
+  team,
+  index,
+  guildId,
+  canManage,
+}: {
+  team: Team;
+  index: number;
+  guildId: string;
+  canManage: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+  return (
+    <Panel
+      className="rise p-4 transition hover:border-lime/40"
+      style={{ animationDelay: `${index * 40}ms` }}
+    >
+      <div className="flex items-center gap-4">
+        {team.logoUrl ? (
+          <img
+            src={team.logoUrl}
+            alt=""
+            className="h-12 w-12 shrink-0 rounded-xl border border-line object-cover"
+          />
+        ) : (
+          <Crest tag={team.tag} />
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-semibold">
+            {team.name} <span className="font-mono text-xs text-muted">[{team.tag}]</span>
+          </p>
+          <p className="truncate text-sm text-muted">{team.description ?? 'No description'}</p>
+        </div>
+        {canManage ? (
+          <button className={ghostButton} onClick={() => setEditing((v) => !v)}>
+            {editing ? 'close' : 'edit'}
+          </button>
+        ) : null}
+      </div>
+      {editing ? (
+        <EditTeamForm team={team} guildId={guildId} onDone={() => setEditing(false)} />
+      ) : null}
+    </Panel>
+  );
+}
+
+function EditTeamForm({
+  team,
+  guildId,
+  onDone,
+}: {
+  team: Team;
+  guildId: string;
+  onDone: () => void;
+}) {
+  const update = useUpdateTeam(guildId);
+  const [name, setName] = useState(team.name);
+  const [tag, setTag] = useState(team.tag);
+  const [logoUrl, setLogoUrl] = useState(team.logoUrl ?? '');
+
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    await update
+      .mutateAsync({ teamId: team.id, name, tag, logoUrl: logoUrl.trim() ? logoUrl : null })
+      .then(onDone)
+      .catch(() => undefined);
+  }
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="mt-3 grid gap-2 border-t border-line pt-3 sm:grid-cols-2"
+    >
+      <input
+        className={inputClass}
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Name"
+      />
+      <input
+        className={inputClass}
+        value={tag}
+        onChange={(e) => setTag(e.target.value)}
+        placeholder="Tag"
+      />
+      <input
+        className={`${inputClass} sm:col-span-2`}
+        value={logoUrl}
+        onChange={(e) => setLogoUrl(e.target.value)}
+        placeholder="Logo URL (empty to clear)"
+      />
+      <div className="flex items-center gap-3 sm:col-span-2">
+        <button type="submit" className={primaryButton} disabled={update.isPending}>
+          {update.isPending ? 'Saving…' : 'Save changes'}
+        </button>
+        {update.isError ? (
+          <span className="text-sm text-cancelled">{update.error.message}</span>
+        ) : null}
+      </div>
+    </form>
   );
 }
 

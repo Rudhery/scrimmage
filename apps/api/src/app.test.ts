@@ -112,6 +112,49 @@ describe('API', () => {
     storage.close();
   });
 
+  it('schedules a scrimmage, records the result and MVP awards', async () => {
+    const { storage, app } = setup();
+    const teams = new TeamService(storage.teams);
+    const home = await teams.createTeam({
+      guildId: 'g',
+      name: 'Alpha',
+      tag: 'ALP',
+      captainId: 'cap',
+    });
+    const away = await teams.createTeam({
+      guildId: 'g',
+      name: 'Bravo',
+      tag: 'BRV',
+      captainId: 'cap',
+    });
+
+    const future = new Date(Date.now() + 86_400_000).toISOString();
+    const scheduleRes = await app.request('/api/guilds/g/scrimmages', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ homeTeamId: home.id, awayTeamId: away.id, scheduledAt: future }),
+    });
+    expect(scheduleRes.status).toBe(201);
+    const scrim = (await scheduleRes.json()) as { id: string; status: string };
+    expect(scrim.status).toBe('confirmed');
+
+    const resultRes = await app.request(`/api/guilds/g/scrimmages/${scrim.id}/result`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ homeScore: 3, awayScore: 1 }),
+    });
+    expect(resultRes.status).toBe(200);
+
+    const awardsRes = await app.request(`/api/guilds/g/scrimmages/${scrim.id}/awards`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ overall: 'u1', offensive: 'u2', defensive: 'u3' }),
+    });
+    expect(awardsRes.status).toBe(200);
+    expect(((await awardsRes.json()) as { overall: string }).overall).toBe('u1');
+    storage.close();
+  });
+
   it('rejects a championship with an invalid best-of', async () => {
     const { storage, app } = setup();
     const res = await app.request('/api/guilds/g/championships', {

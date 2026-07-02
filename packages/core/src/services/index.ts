@@ -10,6 +10,7 @@ export type { RecordStatsInput, SetStatInput, AggregateFilter } from './player-s
 export { RsvpService } from './rsvp-service.js';
 export { PollService } from './poll-service.js';
 export { BotStatusService, DEFAULT_PRESENCE_TTL_MS } from './bot-status-service.js';
+export { ScrimmageAwardService } from './scrimmage-award-service.js';
 export type { BotStatus } from './bot-status-service.js';
 export { ChampionshipService } from './championship-service.js';
 export type {

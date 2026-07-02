@@ -201,3 +201,15 @@ export const botPresence = sqliteTable('bot_presence', {
   guildId: text('guild_id').primaryKey(),
   lastSeenAt: integer('last_seen_at', { mode: 'timestamp_ms' }).notNull(),
 });
+
+export const scrimmageAwards = sqliteTable(
+  'scrimmage_awards',
+  {
+    scrimmageId: text('scrimmage_id')
+      .notNull()
+      .references(() => scrimmages.id, { onDelete: 'cascade' }),
+    category: text('category').notNull(),
+    userId: text('user_id').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.scrimmageId, table.category] })],
+);

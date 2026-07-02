@@ -9,5 +9,6 @@ export type {
   PollRepository,
   ChampionshipRepository,
   BotPresenceRepository,
+  ScrimmageAwardRepository,
   Storage,
 } from './repositories.js';

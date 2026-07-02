@@ -2,12 +2,15 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { getCookie } from 'hono/cookie';
 import {
+  AwardCategory,
   BotStatusService,
   ChampionshipService,
   GuildSettingsService,
+  ScrimmageAwardService,
   ScrimmageService,
   StandingsService,
   TeamService,
+  type ScrimmageAward,
   ConflictError,
   InvalidStateError,
   NotFoundError,
@@ -80,6 +83,17 @@ export function createApp(storage: Storage, options: AppOptions): Hono {
   );
   const championships = new ChampionshipService(storage.championships);
   const botStatus = new BotStatusService(storage.botPresence);
+  const scrimmageAwards = new ScrimmageAwardService(storage.scrimmageAwards);
+
+  const awardsMap = (list: ScrimmageAward[]) => {
+    const holder = (category: string): string | null =>
+      list.find((award) => award.category === category)?.userId ?? null;
+    return {
+      offensive: holder(AwardCategory.Offensive),
+      defensive: holder(AwardCategory.Defensive),
+      overall: holder(AwardCategory.Overall),
+    };
+  };
 
   const oauth = options.oauth ?? null;
   const sessions = options.sessions ?? new SessionStore();
@@ -132,11 +146,14 @@ export function createApp(storage: Storage, options: AppOptions): Hono {
     ]);
     const byId = new Map(allTeams.map((team) => [team.id, team]));
     return c.json(
-      list.map((scrimmage) => ({
-        ...scrimmage,
-        homeTeam: teamRef(byId.get(scrimmage.homeTeamId)),
-        awayTeam: teamRef(byId.get(scrimmage.awayTeamId)),
-      })),
+      await Promise.all(
+        list.map(async (scrimmage) => ({
+          ...scrimmage,
+          homeTeam: teamRef(byId.get(scrimmage.homeTeamId)),
+          awayTeam: teamRef(byId.get(scrimmage.awayTeamId)),
+          awards: awardsMap(await scrimmageAwards.forScrimmage(scrimmage.id)),
+        })),
+      ),
     );
   });
 
@@ -256,6 +273,90 @@ export function createApp(storage: Storage, options: AppOptions): Hono {
         logoUrl: body.logoUrl ? String(body.logoUrl) : undefined,
       });
       return c.json(team, 201);
+    } catch (error) {
+      return fail(c, error);
+    }
+  });
+
+  app.patch('/api/guilds/:guildId/teams/:teamId', canManage, async (c) => {
+    const { guildId, teamId } = c.req.param();
+    const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+    try {
+      if (typeof body.name === 'string' && body.name.trim()) {
+        await teams.renameTeam(guildId, teamId, body.name);
+      }
+      if (typeof body.tag === 'string' && body.tag.trim()) {
+        await teams.setTeamTag(guildId, teamId, body.tag);
+      }
+      if (body.logoUrl !== undefined) {
+        const url =
+          typeof body.logoUrl === 'string' && body.logoUrl.trim() ? body.logoUrl.trim() : null;
+        await teams.setTeamLogo(guildId, teamId, url);
+      }
+      return c.json(await teams.getTeam(guildId, teamId));
+    } catch (error) {
+      return fail(c, error);
+    }
+  });
+
+  app.post('/api/guilds/:guildId/scrimmages', canManage, async (c) => {
+    const guildId = c.req.param('guildId');
+    const session = oauth ? sessions.get(getCookie(c, SESSION_COOKIE)) : null;
+    const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+    try {
+      const proposed = await scrimmages.propose({
+        guildId,
+        homeTeamId: String(body.homeTeamId ?? ''),
+        awayTeamId: String(body.awayTeamId ?? ''),
+        scheduledAt: parseDate(body.scheduledAt, 'kickoff time'),
+        proposedBy: session?.user.id ?? '0',
+      });
+      return c.json(await scrimmages.confirm(guildId, proposed.id), 201);
+    } catch (error) {
+      return fail(c, error);
+    }
+  });
+
+  app.post('/api/guilds/:guildId/scrimmages/:id/result', canManage, async (c) => {
+    const { guildId, id } = c.req.param();
+    const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+    try {
+      return c.json(
+        await scrimmages.recordResult(guildId, id, {
+          homeScore: Number(body.homeScore),
+          awayScore: Number(body.awayScore),
+        }),
+      );
+    } catch (error) {
+      return fail(c, error);
+    }
+  });
+
+  app.post('/api/guilds/:guildId/scrimmages/:id/cancel', canManage, async (c) => {
+    const { guildId, id } = c.req.param();
+    try {
+      return c.json(await scrimmages.cancel(guildId, id));
+    } catch (error) {
+      return fail(c, error);
+    }
+  });
+
+  app.put('/api/guilds/:guildId/scrimmages/:id/awards', canManage, async (c) => {
+    const { guildId, id } = c.req.param();
+    const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+    try {
+      await scrimmages.getScrimmage(guildId, id); // 404 if it is not this guild's
+      for (const category of [
+        AwardCategory.Offensive,
+        AwardCategory.Defensive,
+        AwardCategory.Overall,
+      ]) {
+        if (category in body) {
+          const value = body[category];
+          await scrimmageAwards.setAward(id, category, value == null ? null : String(value));
+        }
+      }
+      return c.json(awardsMap(await scrimmageAwards.forScrimmage(id)));
     } catch (error) {
       return fail(c, error);
     }

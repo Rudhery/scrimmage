@@ -6,6 +6,7 @@ import type { Rsvp } from '../domain/rsvp.js';
 import type { AvailabilityPoll, PollVote } from '../domain/poll.js';
 import type { Championship, ChampionshipTeam, Match, MatchSet } from '../domain/championship.js';
 import type { BotPresence } from '../domain/bot-presence.js';
+import type { AwardCategory, ScrimmageAward } from '../domain/scrimmage-award.js';
 
 /**
  * Persistence boundary for teams and their rosters.
@@ -108,6 +109,13 @@ export interface BotPresenceRepository {
   get(guildId: string): Promise<BotPresence | null>;
 }
 
+/** Persistence boundary for per-scrimmage MVP awards. */
+export interface ScrimmageAwardRepository {
+  set(award: ScrimmageAward): Promise<void>;
+  remove(scrimmageId: string, category: AwardCategory): Promise<void>;
+  listByScrimmage(scrimmageId: string): Promise<ScrimmageAward[]>;
+}
+
 /**
  * A storage backend bundles the repositories the application needs and owns the
  * lifecycle of the underlying connection.
@@ -122,6 +130,7 @@ export interface Storage {
   readonly polls: PollRepository;
   readonly championships: ChampionshipRepository;
   readonly botPresence: BotPresenceRepository;
+  readonly scrimmageAwards: ScrimmageAwardRepository;
   /** Release any underlying resources (connections, file handles, …). */
   close(): Promise<void> | void;
 }
