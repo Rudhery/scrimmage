@@ -9,34 +9,36 @@ import {
   formatKickoff,
 } from '../components/ui';
 import { ChampBadge } from './ChampionshipsPage';
+import { useI18n, type Translate } from '../i18n';
 
-function relative(iso: string | null): string {
-  if (!iso) return 'never';
+function relative(iso: string | null, t: Translate): string {
+  if (!iso) return t('common.never');
   const diff = Date.now() - new Date(iso).getTime();
   const min = Math.floor(diff / 60_000);
-  if (min < 1) return 'just now';
-  if (min < 60) return `${min}m ago`;
+  if (min < 1) return t('time.justNow');
+  if (min < 60) return t('time.minAgo', { n: min });
   const hours = Math.floor(min / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
+  if (hours < 24) return t('time.hAgo', { n: hours });
+  return t('time.dAgo', { n: Math.floor(hours / 24) });
 }
 
 export default function OverviewPage() {
   const { guildId = '' } = useParams();
   const { data, isLoading, isError } = useOverview(guildId);
+  const { t } = useI18n();
 
-  if (isLoading) return <StateBlock title="Loading overview…" />;
+  if (isLoading) return <StateBlock title={t('overview.loading')} />;
   if (isError || !data)
-    return <StateBlock title="Couldn't load the overview" hint="Is the API running?" />;
+    return <StateBlock title={t('overview.error')} hint={t('common.loadingApi')} />;
 
   return (
     <section className="space-y-6">
-      <SectionTitle label="Overview" />
+      <SectionTitle label={t('overview.title')} />
       <BotCard bot={data.bot} />
       <StatGrid counts={data.counts} />
       <ActiveCups cups={data.activeChampionships} />
       <div className="grid gap-6 lg:grid-cols-2">
-        <RecentScrimmages scrimmages={data.recentScrimmages} guildId={guildId} />
+        <RecentScrimmages scrimmages={data.recentScrimmages} />
         <TeamActivityList activity={data.teamActivity} />
       </div>
     </section>
@@ -44,6 +46,7 @@ export default function OverviewPage() {
 }
 
 function BotCard({ bot }: { bot: GuildOverview['bot'] }) {
+  const { t } = useI18n();
   return (
     <Panel
       className={`rise flex items-center gap-4 p-5 ${bot.online ? 'border-confirmed/40' : ''}`}
@@ -58,9 +61,11 @@ function BotCard({ bot }: { bot: GuildOverview['bot'] }) {
       </span>
       <div>
         <p className="font-display text-2xl tracking-wide">
-          {bot.online ? 'Bot online' : 'Bot offline'}
+          {bot.online ? t('overview.botOnline') : t('overview.botOffline')}
         </p>
-        <p className="text-sm text-muted">Last seen {relative(bot.lastSeenAt)}</p>
+        <p className="text-sm text-muted">
+          {t('overview.lastSeen', { when: relative(bot.lastSeenAt, t) })}
+        </p>
       </div>
     </Panel>
   );
@@ -77,28 +82,33 @@ function StatCard({ label, value, hint }: { label: string; value: number; hint?:
 }
 
 function StatGrid({ counts }: { counts: GuildOverview['counts'] }) {
+  const { t } = useI18n();
   return (
     <div className="grid gap-3 sm:grid-cols-3">
-      <StatCard label="Teams" value={counts.teams} />
+      <StatCard label={t('nav.teams')} value={counts.teams} />
       <StatCard
-        label="Scrimmages"
+        label={t('nav.scrimmages')}
         value={counts.scrimmages.total}
-        hint={`${counts.scrimmages.confirmed} upcoming · ${counts.scrimmages.played} played`}
+        hint={t('overview.scrimHint', {
+          upcoming: counts.scrimmages.confirmed,
+          played: counts.scrimmages.played,
+        })}
       />
       <StatCard
-        label="Championships"
+        label={t('cups.title')}
         value={counts.championships.total}
-        hint={`${counts.championships.active} active`}
+        hint={t('overview.cupsHint', { active: counts.championships.active })}
       />
     </div>
   );
 }
 
 function ActiveCups({ cups }: { cups: GuildOverview['activeChampionships'] }) {
+  const { t } = useI18n();
   if (cups.length === 0) return null;
   return (
     <div className="space-y-2">
-      <h3 className="font-display text-xl tracking-wide">Active championships</h3>
+      <h3 className="font-display text-xl tracking-wide">{t('overview.activeCups')}</h3>
       <div className="grid gap-3 sm:grid-cols-2">
         {cups.map((cup) => (
           <Link key={cup.id} to={`championships/${cup.id}`}>
@@ -117,19 +127,19 @@ function scoreLabel(scrimmage: Scrimmage): string {
   return scrimmage.result ? `${scrimmage.result.homeScore}–${scrimmage.result.awayScore}` : 'vs';
 }
 
-function RecentScrimmages({ scrimmages, guildId }: { scrimmages: Scrimmage[]; guildId: string }) {
+function RecentScrimmages({ scrimmages }: { scrimmages: Scrimmage[] }) {
+  const { t } = useI18n();
   return (
     <div className="space-y-2">
-      <h3 className="font-display text-xl tracking-wide">Latest scrimmages</h3>
+      <h3 className="font-display text-xl tracking-wide">{t('overview.latestScrims')}</h3>
       {scrimmages.length === 0 ? (
-        <StateBlock title="No scrimmages yet" />
+        <StateBlock title={t('overview.noScrims')} />
       ) : (
         <Panel className="divide-y divide-line">
           {scrimmages.map((scrim) => (
             <Link
               key={scrim.id}
-              to={`scrimmages`}
-              state={{ guildId }}
+              to="scrimmages"
               className="flex items-center justify-between gap-3 px-4 py-3 transition hover:bg-surface2/50"
             >
               <div className="min-w-0">
@@ -152,11 +162,12 @@ function RecentScrimmages({ scrimmages, guildId }: { scrimmages: Scrimmage[]; gu
 }
 
 function TeamActivityList({ activity }: { activity: TeamActivity[] }) {
+  const { t } = useI18n();
   return (
     <div className="space-y-2">
-      <h3 className="font-display text-xl tracking-wide">Team activity</h3>
+      <h3 className="font-display text-xl tracking-wide">{t('overview.teamActivity')}</h3>
       {activity.length === 0 ? (
-        <StateBlock title="No teams yet" />
+        <StateBlock title={t('overview.noTeams')} />
       ) : (
         <Panel className="divide-y divide-line">
           {activity.map((entry) => (
@@ -168,8 +179,10 @@ function TeamActivityList({ activity }: { activity: TeamActivity[] }) {
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold">{entry.team?.name ?? 'Unknown'}</p>
                 <p className="font-mono text-[11px] text-muted">
-                  {entry.matches} match{entry.matches === 1 ? '' : 'es'} · last{' '}
-                  {relative(entry.lastMatchAt)}
+                  {t(entry.matches === 1 ? 'overview.match' : 'overview.matches', {
+                    count: entry.matches,
+                    when: relative(entry.lastMatchAt, t),
+                  })}
                 </p>
               </div>
               {entry.matches > 0 ? (

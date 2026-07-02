@@ -1,15 +1,17 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth, TEST_GUILD, type AuthGuild } from '../api';
+import { useI18n } from '../i18n';
 
 export default function Home() {
   const navigate = useNavigate();
   const { data, isLoading } = useAuth();
+  const { t } = useI18n();
 
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center px-6 text-center">
       <p className="rise mb-4 font-mono text-xs uppercase tracking-[0.35em] text-lime">
-        Matchday control
+        {t('home.eyebrow')}
       </p>
       <h1
         className="rise font-display text-7xl leading-[0.9] tracking-tight sm:text-8xl"
@@ -18,13 +20,12 @@ export default function Home() {
         SCRIMMAGE
       </h1>
       <p className="rise mt-5 max-w-md text-muted" style={{ animationDelay: '120ms' }}>
-        The live dashboard for your teams, scrimmages and standings — powered by the very same core
-        the bot runs on.
+        {t('home.tagline')}
       </p>
 
       <div className="rise mt-10 w-full max-w-md" style={{ animationDelay: '180ms' }}>
         {isLoading ? (
-          <p className="font-mono text-sm text-muted">Loading…</p>
+          <p className="font-mono text-sm text-muted">{t('home.loading')}</p>
         ) : data?.oauthConfigured ? (
           data.authenticated ? (
             <GuildPicker guilds={data.guilds} onPick={(id) => navigate(`/g/${id}`)} />
@@ -33,7 +34,7 @@ export default function Home() {
               href="/api/auth/login"
               className="inline-flex h-12 items-center gap-2 rounded-xl bg-lime px-6 font-bold text-ink transition hover:brightness-110 active:scale-95"
             >
-              Login with Discord →
+              {t('home.login')}
             </a>
           )
         ) : (
@@ -46,20 +47,21 @@ export default function Home() {
         className="rise mt-6 font-mono text-xs uppercase tracking-widest text-muted transition hover:text-lime"
         style={{ animationDelay: '240ms' }}
       >
-        🧪 Open test mode — try every feature
+        {t('home.testMode')}
       </button>
     </main>
   );
 }
 
 function GuildPicker({ guilds, onPick }: { guilds: AuthGuild[]; onPick: (id: string) => void }) {
+  const { t } = useI18n();
   if (guilds.length === 0) {
-    return <p className="text-sm text-muted">You are not in any servers the bot can see yet.</p>;
+    return <p className="text-sm text-muted">{t('home.noServers')}</p>;
   }
   return (
     <div className="space-y-2 text-left">
       <p className="mb-3 text-center font-mono text-xs uppercase tracking-widest text-muted">
-        Choose a server
+        {t('home.chooseServer')}
       </p>
       {guilds.map((guild) => (
         <button
@@ -71,7 +73,7 @@ function GuildPicker({ guilds, onPick }: { guilds: AuthGuild[]; onPick: (id: str
           <span className="truncate font-semibold">{guild.name}</span>
           {guild.owner ? (
             <span className="ml-auto rounded-md border border-line px-2 py-0.5 font-mono text-[10px] uppercase text-muted">
-              owner
+              {t('home.owner')}
             </span>
           ) : null}
         </button>
@@ -98,6 +100,7 @@ function GuildIcon({ guild }: { guild: AuthGuild }) {
 }
 
 function GuildIdForm({ onSubmit }: { onSubmit: (id: string) => void }) {
+  const { t } = useI18n();
   const [guildId, setGuildId] = useState('');
 
   function submit(event: FormEvent) {
@@ -113,14 +116,14 @@ function GuildIdForm({ onSubmit }: { onSubmit: (id: string) => void }) {
       <input
         value={guildId}
         onChange={(event) => setGuildId(event.target.value)}
-        placeholder="Enter your Discord server ID"
+        placeholder={t('home.guildIdPlaceholder')}
         className="h-12 flex-1 rounded-xl border border-line bg-surface px-4 font-mono text-sm outline-none placeholder:text-muted focus:border-lime"
       />
       <button
         type="submit"
         className="h-12 rounded-xl bg-lime px-5 font-bold text-ink transition hover:brightness-110 active:scale-95"
       >
-        Open →
+        {t('home.open')}
       </button>
     </form>
   );

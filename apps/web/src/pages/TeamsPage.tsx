@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
 import { useCanManage, useCreateTeam, useTeams, useUpdateTeam, type Team } from '../api';
 import { Crest, Panel, SectionTitle, StateBlock } from '../components/ui';
+import { useI18n } from '../i18n';
 
 const ghostButton =
   'rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-muted transition hover:text-fg';
@@ -15,23 +16,20 @@ export default function TeamsPage() {
   const { guildId = '' } = useParams();
   const { data, isLoading, isError } = useTeams(guildId);
   const canManage = useCanManage(guildId);
+  const { t } = useI18n();
 
   return (
     <section className="space-y-6">
-      <SectionTitle label="Teams" count={data?.length} />
+      <SectionTitle label={t('teams.title')} count={data?.length} />
 
       {canManage ? <CreateTeamForm guildId={guildId} /> : null}
 
-      {isLoading ? <StateBlock title="Loading teams…" /> : null}
-      {isError ? <StateBlock title="Couldn't load teams" hint="Is the API running?" /> : null}
+      {isLoading ? <StateBlock title={t('teams.loading')} /> : null}
+      {isError ? <StateBlock title={t('teams.error')} hint={t('common.loadingApi')} /> : null}
       {data && data.length === 0 ? (
         <StateBlock
-          title="No teams yet"
-          hint={
-            canManage
-              ? 'Create one above, or use /team create in Discord.'
-              : 'Use /team create in Discord.'
-          }
+          title={t('teams.empty')}
+          hint={canManage ? t('teams.emptyHintManage') : t('teams.emptyHint')}
         />
       ) : null}
 
@@ -64,6 +62,7 @@ function TeamCard({
   canManage: boolean;
 }) {
   const [editing, setEditing] = useState(false);
+  const { t } = useI18n();
   return (
     <Panel
       className="rise p-4 transition hover:border-lime/40"
@@ -83,11 +82,13 @@ function TeamCard({
           <p className="truncate font-semibold">
             {team.name} <span className="font-mono text-xs text-muted">[{team.tag}]</span>
           </p>
-          <p className="truncate text-sm text-muted">{team.description ?? 'No description'}</p>
+          <p className="truncate text-sm text-muted">
+            {team.description ?? t('teams.noDescription')}
+          </p>
         </div>
         {canManage ? (
           <button className={ghostButton} onClick={() => setEditing((v) => !v)}>
-            {editing ? 'close' : 'edit'}
+            {editing ? t('common.close') : t('common.edit')}
           </button>
         ) : null}
       </div>
@@ -108,6 +109,7 @@ function EditTeamForm({
   onDone: () => void;
 }) {
   const update = useUpdateTeam(guildId);
+  const { t } = useI18n();
   const [name, setName] = useState(team.name);
   const [tag, setTag] = useState(team.tag);
   const [logoUrl, setLogoUrl] = useState(team.logoUrl ?? '');
@@ -145,7 +147,7 @@ function EditTeamForm({
       />
       <div className="flex items-center gap-3 sm:col-span-2">
         <button type="submit" className={primaryButton} disabled={update.isPending}>
-          {update.isPending ? 'Saving…' : 'Save changes'}
+          {update.isPending ? t('teams.saving') : t('teams.save')}
         </button>
         {update.isError ? (
           <span className="text-sm text-cancelled">{update.error.message}</span>
@@ -157,6 +159,7 @@ function EditTeamForm({
 
 function CreateTeamForm({ guildId }: { guildId: string }) {
   const create = useCreateTeam(guildId);
+  const { t } = useI18n();
   const [name, setName] = useState('');
   const [tag, setTag] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
@@ -175,11 +178,11 @@ function CreateTeamForm({ guildId }: { guildId: string }) {
 
   return (
     <Panel className="p-4">
-      <p className="mb-3 font-display text-xl tracking-wide">New team</p>
+      <p className="mb-3 font-display text-xl tracking-wide">{t('teams.new')}</p>
       <form onSubmit={handleSubmit} className="grid gap-3 sm:grid-cols-2">
         <label>
           <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted">
-            Name
+            {t('common.name')}
           </span>
           <input
             className={inputClass}
@@ -191,7 +194,7 @@ function CreateTeamForm({ guildId }: { guildId: string }) {
         </label>
         <label>
           <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted">
-            Tag
+            {t('teams.tag')}
           </span>
           <input
             className={inputClass}
@@ -203,7 +206,7 @@ function CreateTeamForm({ guildId }: { guildId: string }) {
         </label>
         <label className="sm:col-span-2">
           <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted">
-            Logo URL (optional)
+            {t('teams.logo')}
           </span>
           <input
             className={inputClass}
@@ -214,7 +217,7 @@ function CreateTeamForm({ guildId }: { guildId: string }) {
         </label>
         <div className="flex items-center gap-3 sm:col-span-2">
           <button type="submit" className={primaryButton} disabled={create.isPending}>
-            {create.isPending ? 'Creating…' : 'Create team'}
+            {create.isPending ? t('teams.creating') : t('teams.create')}
           </button>
           {create.isError ? (
             <span className="text-sm text-cancelled">{create.error.message}</span>

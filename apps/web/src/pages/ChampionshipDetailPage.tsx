@@ -12,6 +12,7 @@ import {
 } from '../api';
 import { Panel, SectionTitle, StateBlock } from '../components/ui';
 import { ChampBadge } from './ChampionshipsPage';
+import { useI18n, type Translate } from '../i18n';
 
 const inputClass =
   'w-16 rounded-md border border-line bg-surface2 px-2 py-1 text-center text-sm text-fg outline-none focus:border-lime/60';
@@ -24,9 +25,10 @@ export default function ChampionshipDetailPage() {
   const { guildId = '', champId = '' } = useParams();
   const { data, isLoading, isError } = useChampionship(guildId, champId);
   const canManage = useCanManage(guildId);
+  const { t } = useI18n();
 
-  if (isLoading) return <StateBlock title="Loading championship…" />;
-  if (isError || !data) return <StateBlock title="Couldn't load this championship" />;
+  if (isLoading) return <StateBlock title={t('cupDetail.loading')} />;
+  if (isError || !data) return <StateBlock title={t('cupDetail.error')} />;
 
   const { championship } = data;
 
@@ -35,12 +37,14 @@ export default function ChampionshipDetailPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <Link to=".." relative="path" className="text-sm text-muted hover:text-fg">
-            ← Cups
+            {t('cupDetail.back')}
           </Link>
           <SectionTitle label={championship.name} />
           <ChampBadge status={championship.status} />
         </div>
-        <span className="font-mono text-xs text-muted">best of {championship.bestOf}</span>
+        <span className="font-mono text-xs text-muted">
+          {t('cups.bestOfLine', { n: championship.bestOf })}
+        </span>
       </div>
 
       {championship.status === 'draft' ? (
@@ -65,15 +69,11 @@ function Seeding({
 }) {
   const { data: teams } = useTeams(guildId);
   const draw = useDrawBracket(guildId, champId);
+  const { t } = useI18n();
   const [selected, setSelected] = useState<string[]>([]);
 
   if (!canManage) {
-    return (
-      <StateBlock
-        title="This championship hasn't started"
-        hint="A manager will draw the bracket."
-      />
-    );
+    return <StateBlock title={t('cupDetail.notStarted')} hint={t('cupDetail.notStartedHint')} />;
   }
 
   const byId = new Map((teams ?? []).map((t) => [t.id, t]));
@@ -83,11 +83,11 @@ function Seeding({
     <div className="grid gap-4 sm:grid-cols-2">
       <Panel className="p-4">
         <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
-          Available teams
+          {t('cupDetail.available')}
         </p>
         <div className="flex flex-wrap gap-2">
           {available.length === 0 ? (
-            <span className="text-sm text-muted">No more teams.</span>
+            <span className="text-sm text-muted">{t('cupDetail.noMore')}</span>
           ) : null}
           {available.map((team) => (
             <button
@@ -103,11 +103,11 @@ function Seeding({
 
       <Panel className="p-4">
         <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
-          Seeds (top = strongest)
+          {t('cupDetail.seeds')}
         </p>
         <ol className="space-y-2">
           {selected.length === 0 ? (
-            <span className="text-sm text-muted">Click teams to add them, in seed order.</span>
+            <span className="text-sm text-muted">{t('cupDetail.seedHint')}</span>
           ) : null}
           {selected.map((id, index) => (
             <li key={id} className="flex items-center justify-between gap-2">
@@ -120,7 +120,7 @@ function Seeding({
                 className={ghostButton}
                 onClick={() => setSelected((s) => s.filter((x) => x !== id))}
               >
-                remove
+                {t('common.remove')}
               </button>
             </li>
           ))}
@@ -131,7 +131,7 @@ function Seeding({
             disabled={selected.length < 2 || draw.isPending}
             onClick={() => void draw.mutateAsync(selected).catch(() => undefined)}
           >
-            {draw.isPending ? 'Drawing…' : 'Draw bracket'}
+            {draw.isPending ? t('cupDetail.drawing') : t('cupDetail.draw')}
           </button>
           {draw.isError ? (
             <span className="text-sm text-cancelled">{draw.error.message}</span>
@@ -144,12 +144,12 @@ function Seeding({
 
 // --- Active/completed: the bracket ---
 
-function roundLabel(round: number, totalRounds: number): string {
+function roundLabel(round: number, totalRounds: number, t: Translate): string {
   const fromEnd = totalRounds - round;
-  if (fromEnd === 0) return 'Final';
-  if (fromEnd === 1) return 'Semifinals';
-  if (fromEnd === 2) return 'Quarterfinals';
-  return `Round ${round}`;
+  if (fromEnd === 0) return t('round.final');
+  if (fromEnd === 1) return t('round.semis');
+  if (fromEnd === 2) return t('round.quarters');
+  return t('round.n', { n: round });
 }
 
 function Bracket({
@@ -164,6 +164,7 @@ function Bracket({
   canManage: boolean;
 }) {
   const record = useRecordSets(guildId, champId);
+  const { t } = useI18n();
   const teamById = new Map<string, TeamRef | null>(data.teams.map((e) => [e.teamId, e.team]));
   const tagOf = (id: string | null): string => (id ? (teamById.get(id)?.tag ?? '???') : 'TBD');
 
@@ -181,7 +182,7 @@ function Bracket({
         <Panel className="rise flex items-center gap-3 border-lime/40 p-4">
           <span className="text-2xl">🏆</span>
           <p className="font-display text-2xl tracking-wide text-lime">
-            {teamById.get(champion)?.name ?? tagOf(champion)} win the cup!
+            {t('cupDetail.champion', { team: teamById.get(champion)?.name ?? tagOf(champion) })}
           </p>
         </Panel>
       ) : null}
@@ -190,7 +191,7 @@ function Bracket({
         {rounds.map((round) => (
           <div key={round} className="flex min-w-[230px] flex-col gap-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-              {roundLabel(round, totalRounds)}
+              {roundLabel(round, totalRounds, t)}
             </p>
             <div className="flex flex-1 flex-col justify-around gap-4">
               {data.matches
@@ -238,6 +239,7 @@ function MatchCard({
   onRecord: (sets: Array<{ homeScore: number; awayScore: number }>) => Promise<unknown>;
 }) {
   const [editing, setEditing] = useState(false);
+  const { t } = useI18n();
   const won = setsWon(match);
   const playable =
     match.status === 'pending' && match.homeTeamId !== null && match.awayTeamId !== null;
@@ -280,7 +282,7 @@ function MatchCard({
           />
         ) : (
           <button className={`${ghostButton} mt-2`} onClick={() => setEditing(true)}>
-            Record result
+            {t('scrims.recordResult')}
           </button>
         )
       ) : null}
@@ -297,6 +299,7 @@ function RecordForm({
   onSubmit: (sets: Array<{ homeScore: number; awayScore: number }>) => Promise<void>;
   onCancel: () => void;
 }) {
+  const { t } = useI18n();
   const [rows, setRows] = useState<Array<{ home: string; away: string }>>([
     { home: '', away: '' },
     { home: '', away: '' },
@@ -350,14 +353,14 @@ function RecordForm({
           disabled={rows.length >= bestOf}
           onClick={() => setRows((r) => [...r, { home: '', away: '' }])}
         >
-          + set
+          {t('cupDetail.addSet')}
         </button>
         <div className="flex gap-2">
           <button className={ghostButton} onClick={onCancel}>
-            cancel
+            {t('common.cancel')}
           </button>
           <button className={primaryButton} disabled={saving} onClick={() => void submit()}>
-            {saving ? '…' : 'Save'}
+            {saving ? '…' : t('cupDetail.save')}
           </button>
         </div>
       </div>

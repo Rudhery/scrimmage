@@ -20,6 +20,7 @@ import {
   formatKickoff,
 } from '../components/ui';
 import { DateField } from '../components/DateField';
+import { useI18n } from '../i18n';
 
 const inputClass =
   'w-full rounded-lg border border-line bg-surface2 px-3 py-2 text-sm text-fg outline-none focus:border-lime/60';
@@ -28,40 +29,37 @@ const primaryButton =
 const ghostButton =
   'rounded-lg border border-line px-3 py-1.5 text-xs font-semibold text-muted transition hover:text-fg';
 
-const FILTERS: Array<{ value: ScrimmageStatus | 'all'; label: string }> = [
-  { value: 'all', label: 'All' },
-  { value: 'proposed', label: 'Proposed' },
-  { value: 'confirmed', label: 'Confirmed' },
-  { value: 'played', label: 'Played' },
-  { value: 'cancelled', label: 'Cancelled' },
+const FILTERS: Array<ScrimmageStatus | 'all'> = [
+  'all',
+  'proposed',
+  'confirmed',
+  'played',
+  'cancelled',
 ];
 
-const AWARDS: Array<{ key: 'overall' | 'offensive' | 'defensive'; label: string }> = [
-  { key: 'overall', label: '🏐 MVP' },
-  { key: 'offensive', label: '⚡ Offensive' },
-  { key: 'defensive', label: '🛡️ Defensive' },
-];
+const AWARD_KEYS = ['overall', 'offensive', 'defensive'] as const;
 
 export default function ScrimmagesPage() {
   const { guildId = '' } = useParams();
   const [filter, setFilter] = useState<ScrimmageStatus | 'all'>('all');
   const { data, isLoading, isError } = useScrimmages(guildId, filter);
   const canManage = useCanManage(guildId);
+  const { t } = useI18n();
 
   return (
     <section className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <SectionTitle label="Scrimmages" count={data?.length} />
+        <SectionTitle label={t('scrims.title')} count={data?.length} />
         <div className="flex flex-wrap gap-1 rounded-xl border border-line bg-surface/60 p-1">
           {FILTERS.map((option) => (
             <button
-              key={option.value}
-              onClick={() => setFilter(option.value)}
+              key={option}
+              onClick={() => setFilter(option)}
               className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
-                filter === option.value ? 'bg-lime text-ink' : 'text-muted hover:text-fg'
+                filter === option ? 'bg-lime text-ink' : 'text-muted hover:text-fg'
               }`}
             >
-              {option.label}
+              {option === 'all' ? t('scrims.filter.all') : t(`status.${option}`)}
             </button>
           ))}
         </div>
@@ -69,12 +67,12 @@ export default function ScrimmagesPage() {
 
       {canManage ? <ScheduleForm guildId={guildId} /> : null}
 
-      {isLoading ? <StateBlock title="Loading scrimmages…" /> : null}
-      {isError ? <StateBlock title="Couldn't load scrimmages" hint="Is the API running?" /> : null}
+      {isLoading ? <StateBlock title={t('scrims.loading')} /> : null}
+      {isError ? <StateBlock title={t('scrims.error')} hint={t('common.loadingApi')} /> : null}
       {data && data.length === 0 ? (
         <StateBlock
-          title="No scrimmages here"
-          hint={canManage ? 'Schedule one above.' : 'Propose one with /scrim propose in Discord.'}
+          title={t('scrims.empty')}
+          hint={canManage ? t('scrims.emptyHintManage') : t('scrims.emptyHint')}
         />
       ) : null}
 
@@ -107,6 +105,7 @@ function ScrimCard({
   canManage: boolean;
 }) {
   const [managing, setManaging] = useState(false);
+  const { t } = useI18n();
   const awards = scrim.awards;
   const hasAwards = awards && (awards.overall || awards.offensive || awards.defensive);
 
@@ -138,13 +137,13 @@ function ScrimCard({
 
       {hasAwards ? (
         <div className="mt-3 flex flex-wrap justify-center gap-2">
-          {AWARDS.map(({ key, label }) =>
+          {AWARD_KEYS.map((key) =>
             awards?.[key] ? (
               <span
                 key={key}
                 className="inline-flex items-center gap-1 rounded-full border border-lime/30 bg-lime/10 px-2.5 py-0.5 text-[11px] font-semibold text-lime"
               >
-                {label} · <span className="font-mono text-muted">{awards[key]}</span>
+                {t(`award.${key}`)} · <span className="font-mono text-muted">{awards[key]}</span>
               </span>
             ) : null,
           )}
@@ -156,7 +155,7 @@ function ScrimCard({
         <div className="flex items-center gap-2">
           {canManage && scrim.status !== 'cancelled' ? (
             <button className={ghostButton} onClick={() => setManaging((v) => !v)}>
-              {managing ? 'close' : 'manage'}
+              {managing ? t('common.close') : t('scrims.manage')}
             </button>
           ) : null}
           <StatusBadge status={scrim.status} />
@@ -182,6 +181,7 @@ function ManagePanel({
   const recordResult = useRecordScrimResult(guildId);
   const cancel = useCancelScrim(guildId);
   const setAwards = useSetScrimAwards(guildId);
+  const { t } = useI18n();
 
   const [home, setHome] = useState(scrim.result ? String(scrim.result.homeScore) : '');
   const [away, setAway] = useState(scrim.result ? String(scrim.result.awayScore) : '');
@@ -207,14 +207,16 @@ function ManagePanel({
     <div className="mt-3 space-y-4 border-t border-line pt-3">
       {scrim.status === 'confirmed' ? (
         <form onSubmit={submitResult} className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted">Record result</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+            {t('scrims.recordResult')}
+          </p>
           <div className="flex items-center gap-2">
             <input
               className={`${inputClass} w-20 text-center`}
               inputMode="numeric"
               value={home}
               onChange={(e) => setHome(e.target.value)}
-              placeholder="home"
+              placeholder={t('scrims.home')}
             />
             <span className="text-muted">:</span>
             <input
@@ -222,10 +224,10 @@ function ManagePanel({
               inputMode="numeric"
               value={away}
               onChange={(e) => setAway(e.target.value)}
-              placeholder="away"
+              placeholder={t('scrims.away')}
             />
             <button type="submit" className={primaryButton} disabled={recordResult.isPending}>
-              Save score
+              {t('scrims.saveScore')}
             </button>
           </div>
           {recordResult.isError ? (
@@ -236,16 +238,16 @@ function ManagePanel({
 
       <form onSubmit={submitAwards} className="space-y-2">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-          MVP titles (Discord user IDs, empty to clear)
+          {t('scrims.mvpTitles')}
         </p>
         <div className="grid gap-2 sm:grid-cols-3">
-          <AwardInput label="🏐 MVP" value={overall} onChange={setOverall} />
-          <AwardInput label="⚡ Offensive" value={offensive} onChange={setOffensive} />
-          <AwardInput label="🛡️ Defensive" value={defensive} onChange={setDefensive} />
+          <AwardInput label={t('award.overall')} value={overall} onChange={setOverall} />
+          <AwardInput label={t('award.offensive')} value={offensive} onChange={setOffensive} />
+          <AwardInput label={t('award.defensive')} value={defensive} onChange={setDefensive} />
         </div>
         <div className="flex items-center gap-3">
           <button type="submit" className={primaryButton} disabled={setAwards.isPending}>
-            Save MVPs
+            {t('scrims.saveMvps')}
           </button>
           {setAwards.isError ? (
             <span className="text-xs text-cancelled">{setAwards.error.message}</span>
@@ -265,7 +267,7 @@ function ManagePanel({
                 .catch(() => undefined)
             }
           >
-            Cancel scrimmage
+            {t('scrims.cancelScrim')}
           </button>
         ) : null}
       </div>
@@ -282,6 +284,7 @@ function AwardInput({
   value: string;
   onChange: (value: string) => void;
 }) {
+  const { t } = useI18n();
   return (
     <label className="block">
       <span className="mb-1 block text-[11px] font-semibold text-muted">{label}</span>
@@ -289,7 +292,7 @@ function AwardInput({
         className={inputClass}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="user id"
+        placeholder={t('scrims.userId')}
       />
     </label>
   );
@@ -298,6 +301,7 @@ function AwardInput({
 function ScheduleForm({ guildId }: { guildId: string }) {
   const { data: teams } = useTeams(guildId);
   const schedule = useScheduleScrim(guildId);
+  const { t, locale } = useI18n();
   const [homeTeamId, setHomeTeamId] = useState('');
   const [awayTeamId, setAwayTeamId] = useState('');
   const [scheduledAt, setScheduledAt] = useState('');
@@ -316,11 +320,11 @@ function ScheduleForm({ guildId }: { guildId: string }) {
 
   return (
     <Panel className="p-4">
-      <p className="mb-3 font-display text-xl tracking-wide">Schedule a scrimmage</p>
+      <p className="mb-3 font-display text-xl tracking-wide">{t('scrims.schedule')}</p>
       <form onSubmit={handleSubmit} className="grid gap-3 sm:grid-cols-2">
         <label>
           <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted">
-            Home
+            {t('scrims.home')}
           </span>
           <select
             className={inputClass}
@@ -328,7 +332,7 @@ function ScheduleForm({ guildId }: { guildId: string }) {
             onChange={(e) => setHomeTeamId(e.target.value)}
             required
           >
-            <option value="">Select a team…</option>
+            <option value="">{t('scrims.selectTeam')}</option>
             {(teams ?? []).map((team) => (
               <option key={team.id} value={team.id}>
                 {team.name} [{team.tag}]
@@ -338,7 +342,7 @@ function ScheduleForm({ guildId }: { guildId: string }) {
         </label>
         <label>
           <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted">
-            Away
+            {t('scrims.away')}
           </span>
           <select
             className={inputClass}
@@ -346,7 +350,7 @@ function ScheduleForm({ guildId }: { guildId: string }) {
             onChange={(e) => setAwayTeamId(e.target.value)}
             required
           >
-            <option value="">Select a team…</option>
+            <option value="">{t('scrims.selectTeam')}</option>
             {(teams ?? []).map((team) => (
               <option key={team.id} value={team.id}>
                 {team.name} [{team.tag}]
@@ -356,13 +360,14 @@ function ScheduleForm({ guildId }: { guildId: string }) {
         </label>
         <label className="sm:col-span-2">
           <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted">
-            Kickoff
+            {t('scrims.kickoff')}
           </span>
           <DateField
             value={scheduledAt}
             onChange={setScheduledAt}
             withTime
-            placeholder="Pick date & time"
+            placeholder={t('scrims.pickDateTime')}
+            locale={locale}
           />
         </label>
         <div className="flex items-center gap-3 sm:col-span-2">
@@ -371,7 +376,7 @@ function ScheduleForm({ guildId }: { guildId: string }) {
             className={primaryButton}
             disabled={schedule.isPending || !homeTeamId || !awayTeamId || !scheduledAt}
           >
-            {schedule.isPending ? 'Scheduling…' : 'Schedule (confirmed)'}
+            {schedule.isPending ? t('scrims.scheduling') : t('scrims.scheduleBtn')}
           </button>
           {schedule.isError ? (
             <span className="text-sm text-cancelled">{schedule.error.message}</span>

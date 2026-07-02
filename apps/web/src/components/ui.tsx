@@ -1,27 +1,22 @@
 import type { CSSProperties, ReactNode } from 'react';
 import type { ScrimmageStatus } from '../api';
+import { useI18n, type MessageKey } from '../i18n';
 
-const STATUS: Record<ScrimmageStatus, { label: string; className: string }> = {
-  proposed: { label: 'Proposed', className: 'text-proposed border-proposed/40 bg-proposed/10' },
-  confirmed: {
-    label: 'Confirmed',
-    className: 'text-confirmed border-confirmed/40 bg-confirmed/10',
-  },
-  cancelled: {
-    label: 'Cancelled',
-    className: 'text-cancelled border-cancelled/40 bg-cancelled/10',
-  },
-  played: { label: 'Played', className: 'text-played border-played/40 bg-played/10' },
+const STATUS_CLASS: Record<ScrimmageStatus, string> = {
+  proposed: 'text-proposed border-proposed/40 bg-proposed/10',
+  confirmed: 'text-confirmed border-confirmed/40 bg-confirmed/10',
+  cancelled: 'text-cancelled border-cancelled/40 bg-cancelled/10',
+  played: 'text-played border-played/40 bg-played/10',
 };
 
 export function StatusBadge({ status }: { status: ScrimmageStatus }) {
-  const style = STATUS[status];
+  const { t } = useI18n();
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider ${style.className}`}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider ${STATUS_CLASS[status]}`}
     >
       <span className="h-1.5 w-1.5 rounded-full bg-current" />
-      {style.label}
+      {t(`status.${status}` as MessageKey)}
     </span>
   );
 }

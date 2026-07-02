@@ -1,6 +1,7 @@
 import { useParams } from 'react-router-dom';
 import { useStandings } from '../api';
 import { Crest, Panel, SectionTitle, StateBlock } from '../components/ui';
+import { useI18n } from '../i18n';
 
 const ROW =
   'grid grid-cols-[2rem_1fr_repeat(5,2rem)] items-center gap-2 sm:grid-cols-[2.5rem_1fr_repeat(6,2.75rem)]';
@@ -8,27 +9,23 @@ const ROW =
 export default function StandingsPage() {
   const { guildId = '' } = useParams();
   const { data, isLoading, isError } = useStandings(guildId);
+  const { t } = useI18n();
 
-  if (isLoading) return <StateBlock title="Loading standings…" />;
-  if (isError) return <StateBlock title="Couldn't load standings" hint="Is the API running?" />;
+  if (isLoading) return <StateBlock title={t('standings.loading')} />;
+  if (isError) return <StateBlock title={t('standings.error')} hint={t('common.loadingApi')} />;
   if (!data || data.length === 0) {
-    return (
-      <StateBlock
-        title="No matches played yet"
-        hint="The table fills up as results are recorded."
-      />
-    );
+    return <StateBlock title={t('standings.empty')} hint={t('standings.emptyHint')} />;
   }
 
   return (
     <section>
-      <SectionTitle label="League table" count={data.length} />
+      <SectionTitle label={t('standings.title')} count={data.length} />
       <Panel className="mt-4 overflow-hidden">
         <div
           className={`${ROW} border-b border-line px-4 py-3 font-mono text-[11px] uppercase tracking-wide text-muted`}
         >
           <span>#</span>
-          <span>Team</span>
+          <span>{t('standings.team')}</span>
           <span className="text-center">P</span>
           <span className="text-center">W</span>
           <span className="text-center">D</span>
