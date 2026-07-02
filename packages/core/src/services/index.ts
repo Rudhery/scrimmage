@@ -9,3 +9,11 @@ export { PlayerStatsService } from './player-stats-service.js';
 export type { RecordStatsInput, SetStatInput, AggregateFilter } from './player-stats-service.js';
 export { RsvpService } from './rsvp-service.js';
 export { PollService } from './poll-service.js';
+export { ChampionshipService } from './championship-service.js';
+export type {
+  CreateChampionshipInput,
+  RecordSetInput,
+  MatchWithSets,
+} from './championship-service.js';
+export { buildBracket } from './bracket.js';
+export type { BracketMatchSpec } from './bracket.js';

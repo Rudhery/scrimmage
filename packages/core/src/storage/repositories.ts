@@ -4,6 +4,7 @@ import type { GuildSettings } from '../domain/guild-settings.js';
 import type { PlayerStatLine, StatCategory } from '../domain/stats.js';
 import type { Rsvp } from '../domain/rsvp.js';
 import type { AvailabilityPoll, PollVote } from '../domain/poll.js';
+import type { Championship, ChampionshipTeam, Match, MatchSet } from '../domain/championship.js';
 
 /**
  * Persistence boundary for teams and their rosters.
@@ -81,6 +82,24 @@ export interface PollRepository {
   listVotes(pollId: string): Promise<PollVote[]>;
 }
 
+/** Persistence boundary for championships, their teams, matches and set scores. */
+export interface ChampionshipRepository {
+  create(championship: Championship): Promise<Championship>;
+  find(id: string): Promise<Championship | null>;
+  list(guildId: string): Promise<Championship[]>;
+  update(championship: Championship): Promise<Championship>;
+  /** Replace the full seeded team list for a championship. */
+  setTeams(championshipId: string, teams: ChampionshipTeam[]): Promise<void>;
+  listTeams(championshipId: string): Promise<ChampionshipTeam[]>;
+  createMatches(matches: Match[]): Promise<void>;
+  findMatch(id: string): Promise<Match | null>;
+  listMatches(championshipId: string): Promise<Match[]>;
+  updateMatch(match: Match): Promise<Match>;
+  /** Replace the full set list for a match. */
+  setMatchSets(matchId: string, sets: MatchSet[]): Promise<void>;
+  listMatchSets(matchId: string): Promise<MatchSet[]>;
+}
+
 /**
  * A storage backend bundles the repositories the application needs and owns the
  * lifecycle of the underlying connection.
@@ -93,6 +112,7 @@ export interface Storage {
   readonly playerStats: PlayerStatsRepository;
   readonly rsvps: RsvpRepository;
   readonly polls: PollRepository;
+  readonly championships: ChampionshipRepository;
   /** Release any underlying resources (connections, file handles, …). */
   close(): Promise<void> | void;
 }

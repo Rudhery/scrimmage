@@ -9,3 +9,5 @@ export { VOLLEYBALL_PRESET } from './stats.js';
 export type { Rsvp } from './rsvp.js';
 export { RsvpStatus } from './rsvp.js';
 export type { AvailabilityPoll, PollVote } from './poll.js';
+export type { Championship, ChampionshipTeam, Match, MatchSet } from './championship.js';
+export { ChampionshipStatus, ChampionshipFormat, MatchStatus, setsToWin } from './championship.js';

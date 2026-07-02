@@ -7,5 +7,6 @@ export type {
   PlayerStatsRepository,
   RsvpRepository,
   PollRepository,
+  ChampionshipRepository,
   Storage,
 } from './repositories.js';

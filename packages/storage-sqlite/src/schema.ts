@@ -136,3 +136,63 @@ export const pollVotes = sqliteTable(
   },
   (table) => [primaryKey({ columns: [table.pollId, table.slotIndex, table.userId] })],
 );
+
+export const championships = sqliteTable(
+  'championships',
+  {
+    id: text('id').primaryKey(),
+    guildId: text('guild_id').notNull(),
+    name: text('name').notNull(),
+    format: text('format').notNull(),
+    bestOf: integer('best_of').notNull(),
+    startsAt: integer('starts_at', { mode: 'timestamp_ms' }).notNull(),
+    endsAt: integer('ends_at', { mode: 'timestamp_ms' }).notNull(),
+    status: text('status').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  },
+  (table) => [index('championships_guild_idx').on(table.guildId)],
+);
+
+export const championshipTeams = sqliteTable(
+  'championship_teams',
+  {
+    championshipId: text('championship_id')
+      .notNull()
+      .references(() => championships.id, { onDelete: 'cascade' }),
+    teamId: text('team_id').notNull(),
+    seed: integer('seed').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.championshipId, table.teamId] })],
+);
+
+export const matches = sqliteTable(
+  'matches',
+  {
+    id: text('id').primaryKey(),
+    championshipId: text('championship_id')
+      .notNull()
+      .references(() => championships.id, { onDelete: 'cascade' }),
+    round: integer('round').notNull(),
+    position: integer('position').notNull(),
+    homeTeamId: text('home_team_id'),
+    awayTeamId: text('away_team_id'),
+    winnerTeamId: text('winner_team_id'),
+    status: text('status').notNull(),
+    nextMatchId: text('next_match_id'),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  },
+  (table) => [index('matches_championship_idx').on(table.championshipId)],
+);
+
+export const matchSets = sqliteTable(
+  'match_sets',
+  {
+    matchId: text('match_id')
+      .notNull()
+      .references(() => matches.id, { onDelete: 'cascade' }),
+    setNumber: integer('set_number').notNull(),
+    homeScore: integer('home_score').notNull(),
+    awayScore: integer('away_score').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.matchId, table.setNumber] })],
+);
