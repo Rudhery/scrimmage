@@ -19,6 +19,7 @@ import {
   StatusBadge,
   formatKickoff,
 } from '../components/ui';
+import { DateField } from '../components/DateField';
 
 const inputClass =
   'w-full rounded-lg border border-line bg-surface2 px-3 py-2 text-sm text-fg outline-none focus:border-lime/60';
@@ -357,16 +358,19 @@ function ScheduleForm({ guildId }: { guildId: string }) {
           <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted">
             Kickoff
           </span>
-          <input
-            type="datetime-local"
-            className={inputClass}
+          <DateField
             value={scheduledAt}
-            onChange={(e) => setScheduledAt(e.target.value)}
-            required
+            onChange={setScheduledAt}
+            withTime
+            placeholder="Pick date & time"
           />
         </label>
         <div className="flex items-center gap-3 sm:col-span-2">
-          <button type="submit" className={primaryButton} disabled={schedule.isPending}>
+          <button
+            type="submit"
+            className={primaryButton}
+            disabled={schedule.isPending || !homeTeamId || !awayTeamId || !scheduledAt}
+          >
             {schedule.isPending ? 'Scheduling…' : 'Schedule (confirmed)'}
           </button>
           {schedule.isError ? (

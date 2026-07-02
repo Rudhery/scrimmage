@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useCanManage, useChampionships, useCreateChampionship, type Championship } from '../api';
 import { Panel, SectionTitle, StateBlock } from '../components/ui';
+import { DateField } from '../components/DateField';
 
 const inputClass =
   'w-full rounded-lg border border-line bg-surface2 px-3 py-2 text-sm text-fg outline-none focus:border-lime/60';
@@ -133,29 +134,21 @@ function CreateForm({ guildId }: { guildId: string }) {
             <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted">
               Starts
             </span>
-            <input
-              type="date"
-              className={inputClass}
-              value={startsAt}
-              onChange={(e) => setStartsAt(e.target.value)}
-              required
-            />
+            <DateField value={startsAt} onChange={setStartsAt} placeholder="Start date" />
           </label>
           <label>
             <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted">
               Ends
             </span>
-            <input
-              type="date"
-              className={inputClass}
-              value={endsAt}
-              onChange={(e) => setEndsAt(e.target.value)}
-              required
-            />
+            <DateField value={endsAt} onChange={setEndsAt} placeholder="End date" />
           </label>
         </div>
         <div className="flex items-center gap-3 sm:col-span-2">
-          <button type="submit" className={primaryButton} disabled={create.isPending}>
+          <button
+            type="submit"
+            className={primaryButton}
+            disabled={create.isPending || !name.trim() || !startsAt || !endsAt}
+          >
             {create.isPending ? 'Creating…' : 'Create championship'}
           </button>
           {create.isError ? (
