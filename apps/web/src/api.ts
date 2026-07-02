@@ -1,4 +1,10 @@
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseMutationResult,
+  type UseQueryResult,
+} from '@tanstack/react-query';
 
 export type ScrimmageStatus = 'proposed' | 'confirmed' | 'cancelled' | 'played';
 export type TeamRole = 'coach' | 'assistant' | 'player';
@@ -53,6 +59,28 @@ async function getJson<T>(url: string): Promise<T> {
   const res = await fetch(url, { credentials: 'include' });
   if (!res.ok) {
     throw new Error(`Request failed (${res.status})`);
+  }
+  return res.json() as Promise<T>;
+}
+
+async function sendJson<T>(url: string, method: string, body: unknown): Promise<T> {
+  const res = await fetch(url, {
+    method,
+    headers: { 'content-type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    let message = `Request failed (${res.status})`;
+    try {
+      const data = (await res.json()) as { error?: string };
+      if (data.error) {
+        message = data.error;
+      }
+    } catch {
+      /* keep the default message */
+    }
+    throw new Error(message);
   }
   return res.json() as Promise<T>;
 }
@@ -116,4 +144,185 @@ export function useStandings(guildId: string): UseQueryResult<Standing[]> {
     queryKey: ['standings', guildId],
     queryFn: () => getJson<Standing[]>(`/api/guilds/${encodeURIComponent(guildId)}/standings`),
   });
+}
+
+// --- Championships ---
+
+export type ChampionshipStatus = 'draft' | 'active' | 'completed';
+export type MatchStatus = 'pending' | 'played';
+
+export interface Championship {
+  id: string;
+  guildId: string;
+  name: string;
+  format: string;
+  bestOf: number;
+  startsAt: string;
+  endsAt: string;
+  status: ChampionshipStatus;
+  createdAt: string;
+}
+
+export interface MatchSet {
+  matchId: string;
+  setNumber: number;
+  homeScore: number;
+  awayScore: number;
+}
+
+export interface Match {
+  id: string;
+  championshipId: string;
+  round: number;
+  position: number;
+  homeTeamId: string | null;
+  awayTeamId: string | null;
+  winnerTeamId: string | null;
+  status: MatchStatus;
+  nextMatchId: string | null;
+  createdAt: string;
+  sets: MatchSet[];
+}
+
+export interface ChampionshipEntrant {
+  championshipId: string;
+  teamId: string;
+  seed: number;
+  team: TeamRef | null;
+}
+
+export interface ChampionshipDetail {
+  championship: Championship;
+  teams: ChampionshipEntrant[];
+  matches: Match[];
+}
+
+const guildKey = (guildId: string) => encodeURIComponent(guildId);
+
+export function useChampionships(guildId: string): UseQueryResult<Championship[]> {
+  return useQuery({
+    queryKey: ['championships', guildId],
+    queryFn: () => getJson<Championship[]>(`/api/guilds/${guildKey(guildId)}/championships`),
+  });
+}
+
+export function useChampionship(
+  guildId: string,
+  champId: string,
+): UseQueryResult<ChampionshipDetail> {
+  return useQuery({
+    queryKey: ['championship', guildId, champId],
+    queryFn: () =>
+      getJson<ChampionshipDetail>(
+        `/api/guilds/${guildKey(guildId)}/championships/${encodeURIComponent(champId)}`,
+      ),
+  });
+}
+
+export interface CreateTeamInput {
+  name: string;
+  tag: string;
+  description?: string;
+  logoUrl?: string;
+}
+
+export function useCreateTeam(guildId: string): UseMutationResult<Team, Error, CreateTeamInput> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateTeamInput) =>
+      sendJson<Team>(`/api/guilds/${guildKey(guildId)}/teams`, 'POST', input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['teams', guildId] }),
+  });
+}
+
+export interface CreateChampionshipInput {
+  name: string;
+  bestOf: number;
+  startsAt: string;
+  endsAt: string;
+}
+
+export function useCreateChampionship(
+  guildId: string,
+): UseMutationResult<Championship, Error, CreateChampionshipInput> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateChampionshipInput) =>
+      sendJson<Championship>(`/api/guilds/${guildKey(guildId)}/championships`, 'POST', input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['championships', guildId] }),
+  });
+}
+
+/** Seed the teams and immediately draw the bracket. */
+export function useDrawBracket(
+  guildId: string,
+  champId: string,
+): UseMutationResult<Championship, Error, string[]> {
+  const queryClient = useQueryClient();
+  const base = `/api/guilds/${guildKey(guildId)}/championships/${encodeURIComponent(champId)}`;
+  return useMutation({
+    mutationFn: async (teamIds: string[]) => {
+      await sendJson(`${base}/teams`, 'PUT', { teamIds });
+      return sendJson<Championship>(`${base}/bracket`, 'POST', {});
+    },
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ['championship', guildId, champId] }),
+  });
+}
+
+export interface RecordSetsInput {
+  matchId: string;
+  sets: Array<{ homeScore: number; awayScore: number }>;
+}
+
+export function useRecordSets(
+  guildId: string,
+  champId: string,
+): UseMutationResult<Match, Error, RecordSetsInput> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ matchId, sets }: RecordSetsInput) =>
+      sendJson<Match>(
+        `/api/guilds/${guildKey(guildId)}/matches/${encodeURIComponent(matchId)}/sets`,
+        'POST',
+        {
+          sets,
+        },
+      ),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ['championship', guildId, champId] }),
+  });
+}
+
+const MANAGE_GUILD = 1n << 5n;
+const ADMINISTRATOR = 1n << 3n;
+
+/** A sandbox guild for trying every feature without Discord login. */
+export const TEST_GUILD = 'teste';
+
+/** Whether the current user may manage this guild (create teams, run championships). */
+export function useCanManage(guildId: string): boolean {
+  const { data } = useAuth();
+  if (guildId === TEST_GUILD) {
+    return true; // sandbox: everything is editable
+  }
+  if (!data) {
+    return false;
+  }
+  if (!data.oauthConfigured) {
+    return true; // open mode (local dev)
+  }
+  const guild = data.guilds.find((g) => g.id === guildId);
+  if (!guild) {
+    return false;
+  }
+  if (guild.owner) {
+    return true;
+  }
+  try {
+    const permissions = BigInt(guild.permissions);
+    return (permissions & ADMINISTRATOR) !== 0n || (permissions & MANAGE_GUILD) !== 0n;
+  } catch {
+    return false;
+  }
 }

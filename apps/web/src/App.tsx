@@ -4,6 +4,8 @@ import GuildLayout from './pages/GuildLayout';
 import StandingsPage from './pages/StandingsPage';
 import TeamsPage from './pages/TeamsPage';
 import ScrimmagesPage from './pages/ScrimmagesPage';
+import ChampionshipsPage from './pages/ChampionshipsPage';
+import ChampionshipDetailPage from './pages/ChampionshipDetailPage';
 
 export default function App() {
   return (
@@ -13,6 +15,8 @@ export default function App() {
         <Route index element={<StandingsPage />} />
         <Route path="teams" element={<TeamsPage />} />
         <Route path="scrimmages" element={<ScrimmagesPage />} />
+        <Route path="championships" element={<ChampionshipsPage />} />
+        <Route path="championships/:champId" element={<ChampionshipDetailPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

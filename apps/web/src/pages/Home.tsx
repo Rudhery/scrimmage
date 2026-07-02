@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth, type AuthGuild } from '../api';
+import { useAuth, TEST_GUILD, type AuthGuild } from '../api';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -40,6 +40,14 @@ export default function Home() {
           <GuildIdForm onSubmit={(id) => navigate(`/g/${encodeURIComponent(id)}`)} />
         )}
       </div>
+
+      <button
+        onClick={() => navigate(`/g/${TEST_GUILD}`)}
+        className="rise mt-6 font-mono text-xs uppercase tracking-widest text-muted transition hover:text-lime"
+        style={{ animationDelay: '240ms' }}
+      >
+        🧪 Open test mode — try every feature
+      </button>
     </main>
   );
 }

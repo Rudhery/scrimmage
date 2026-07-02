@@ -30,6 +30,10 @@ possible front-ends.
 - **RSVP** — players confirm attendance (Going / Maybe / Can't) with live counts, via buttons.
 - **Availability polls** — propose time slots, everyone taps the ones they can make, and the bot
   highlights the slot that works for the most players.
+- **Championships (web dashboard)** — run single-elimination volleyball cups: create a cup with a
+  date window and best-of (3/5), create/seed teams, draw the bracket (byes for the top seeds), and
+  record per-set scores that advance the winner all the way to the crown. Managing requires Discord
+  "Manage Server"; open the sandbox at `/g/teste` to try everything without logging in.
 - **Standings & stats** — a league table (W/D/L, goal difference, points) from recorded results.
 - **Player stats & MVP** — record per-player, per-match stats (configurable categories, volleyball
   preset) and get a weighted MVP leaderboard.

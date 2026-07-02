@@ -1,11 +1,12 @@
 import { Link, NavLink, Navigate, Outlet, useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { logout, useAuth, type AuthUser } from '../api';
+import { logout, useAuth, TEST_GUILD, type AuthUser } from '../api';
 
 const TABS = [
   { to: '', label: 'Standings', end: true },
   { to: 'teams', label: 'Teams', end: false },
   { to: 'scrimmages', label: 'Scrimmages', end: false },
+  { to: 'championships', label: 'Cups', end: false },
 ];
 
 export default function GuildLayout() {
@@ -14,8 +15,11 @@ export default function GuildLayout() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  // When login is required but the user is signed out, send them home.
-  if (data?.oauthConfigured && !data.authenticated) {
+  const testMode = guildId === TEST_GUILD;
+
+  // When login is required but the user is signed out, send them home — unless
+  // this is the sandbox test guild, which is always open.
+  if (data?.oauthConfigured && !data.authenticated && !testMode) {
     return <Navigate to="/" replace />;
   }
 
@@ -35,6 +39,11 @@ export default function GuildLayout() {
           <span className="rounded-md border border-line bg-surface px-2 py-1 font-mono text-[11px] text-muted">
             server {guildId}
           </span>
+          {testMode ? (
+            <span className="rounded-md border border-lime/40 bg-lime/10 px-2 py-1 font-mono text-[11px] font-bold text-lime">
+              🧪 test mode
+            </span>
+          ) : null}
         </div>
 
         <div className="flex items-center gap-3">
