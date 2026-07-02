@@ -37,4 +37,89 @@ describe('API', () => {
     expect(res.status).toBe(404);
     storage.close();
   });
+
+  it('creates a team through the API', async () => {
+    const { storage, app } = setup();
+    const res = await app.request('/api/guilds/g/teams', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: 'Alpha', tag: 'ALP' }),
+    });
+    expect(res.status).toBe(201);
+    const list = (await (await app.request('/api/guilds/g/teams')).json()) as unknown[];
+    expect(list).toHaveLength(1);
+    storage.close();
+  });
+
+  it('runs a championship from creation to a recorded result', async () => {
+    const { storage, app } = setup();
+    const teams = new TeamService(storage.teams);
+    const defs: Array<[string, string]> = [
+      ['Alpha', 'ALP'],
+      ['Bravo', 'BRV'],
+      ['Charlie', 'CHA'],
+      ['Delta', 'DEL'],
+    ];
+    const created = [];
+    for (const [name, tag] of defs) {
+      created.push(await teams.createTeam({ guildId: 'g', name, tag, captainId: 'cap' }));
+    }
+
+    const createRes = await app.request('/api/guilds/g/championships', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Cup',
+        bestOf: 3,
+        startsAt: '2026-07-01',
+        endsAt: '2026-07-31',
+      }),
+    });
+    expect(createRes.status).toBe(201);
+    const champ = (await createRes.json()) as { id: string; status: string };
+    expect(champ.status).toBe('draft');
+
+    const seedRes = await app.request(`/api/guilds/g/championships/${champ.id}/teams`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ teamIds: created.map((t) => t.id) }),
+    });
+    expect(seedRes.status).toBe(200);
+
+    const bracketRes = await app.request(`/api/guilds/g/championships/${champ.id}/bracket`, {
+      method: 'POST',
+    });
+    expect(bracketRes.status).toBe(200);
+    expect(((await bracketRes.json()) as { status: string }).status).toBe('active');
+
+    const detail = (await (
+      await app.request(`/api/guilds/g/championships/${champ.id}`)
+    ).json()) as { matches: Array<{ id: string; round: number; position: number }> };
+    const semi = detail.matches.find((m) => m.round === 1 && m.position === 0);
+
+    const setRes = await app.request(`/api/guilds/g/matches/${semi!.id}/sets`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        sets: [
+          { homeScore: 25, awayScore: 20 },
+          { homeScore: 25, awayScore: 18 },
+        ],
+      }),
+    });
+    expect(setRes.status).toBe(200);
+    expect(((await setRes.json()) as { status: string }).status).toBe('played');
+    storage.close();
+  });
+
+  it('rejects a championship with an invalid best-of', async () => {
+    const { storage, app } = setup();
+    const res = await app.request('/api/guilds/g/championships', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: 'x', bestOf: 4, startsAt: '2026-07-01', endsAt: '2026-07-31' }),
+    });
+    expect(res.status).toBe(400);
+    storage.close();
+  });
 });

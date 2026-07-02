@@ -86,3 +86,39 @@ export function requireGuildAccess(sessions: SessionStore): MiddlewareHandler {
     return next();
   };
 }
+
+const MANAGE_GUILD = 1n << 5n;
+const ADMINISTRATOR = 1n << 3n;
+
+/**
+ * Guard write routes: require the user to have "Manage Server" (or Administrator,
+ * or be the owner) on the guild. When OAuth is disabled the API runs open, so the
+ * guard is a no-op — handy for local development.
+ */
+export function requireManageServer(sessions: SessionStore, enabled: boolean): MiddlewareHandler {
+  return async (c, next) => {
+    if (!enabled) {
+      return next();
+    }
+    const session = sessions.get(getCookie(c, SESSION_COOKIE));
+    if (!session) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+    const guild = session.guilds.find((g) => g.id === c.req.param('guildId'));
+    if (!guild) {
+      return c.json({ error: 'Forbidden' }, 403);
+    }
+    let permissions = 0n;
+    try {
+      permissions = BigInt(guild.permissions);
+    } catch {
+      permissions = 0n;
+    }
+    const canManage =
+      guild.owner || (permissions & ADMINISTRATOR) !== 0n || (permissions & MANAGE_GUILD) !== 0n;
+    if (!canManage) {
+      return c.json({ error: 'You need the Manage Server permission.' }, 403);
+    }
+    return next();
+  };
+}

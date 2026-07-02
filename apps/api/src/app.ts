@@ -2,17 +2,29 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { getCookie } from 'hono/cookie';
 import {
+  ChampionshipService,
   GuildSettingsService,
   ScrimmageService,
   StandingsService,
   TeamService,
+  ConflictError,
+  InvalidStateError,
+  NotFoundError,
+  ScrimmageError,
+  ValidationError,
   type ScrimmageStatus,
   type Storage,
   type Team,
 } from '@scrimmage/core';
+import type { Context } from 'hono';
 import type { OAuthConfig } from './auth/oauth.js';
 import { SessionStore } from './auth/sessions.js';
-import { registerAuth, requireGuildAccess, SESSION_COOKIE } from './auth/routes.js';
+import {
+  registerAuth,
+  requireGuildAccess,
+  requireManageServer,
+  SESSION_COOKIE,
+} from './auth/routes.js';
 
 export interface AppOptions {
   readonly webOrigin: string;
@@ -27,6 +39,32 @@ function teamRef(team: Team | undefined): { id: string; name: string; tag: strin
   return team ? { id: team.id, name: team.name, tag: team.tag } : null;
 }
 
+/** Map a thrown domain error to an HTTP response. */
+function fail(c: Context, error: unknown): Response {
+  if (error instanceof ValidationError) {
+    return c.json({ error: error.message, issues: error.issues }, 400);
+  }
+  if (error instanceof NotFoundError) {
+    return c.json({ error: error.message }, 404);
+  }
+  if (error instanceof ConflictError || error instanceof InvalidStateError) {
+    return c.json({ error: error.message }, 409);
+  }
+  if (error instanceof ScrimmageError) {
+    return c.json({ error: error.message }, 400);
+  }
+  return c.json({ error: 'Something went wrong.' }, 500);
+}
+
+/** Parse an ISO date string, throwing a ValidationError if it is invalid. */
+function parseDate(value: unknown, field: string): Date {
+  const date = new Date(String(value));
+  if (Number.isNaN(date.getTime())) {
+    throw new ValidationError(`Invalid ${field}.`);
+  }
+  return date;
+}
+
 /**
  * Build the read-only HTTP API. It reuses the exact same `@scrimmage/core`
  * services the bot uses — the only difference is the front-end. When OAuth is
@@ -39,9 +77,11 @@ export function createApp(storage: Storage, options: AppOptions): Hono {
     storage.scrimmages,
     new GuildSettingsService(storage.guildSettings),
   );
+  const championships = new ChampionshipService(storage.championships);
 
   const oauth = options.oauth ?? null;
   const sessions = options.sessions ?? new SessionStore();
+  const canManage = requireManageServer(sessions, oauth !== null);
 
   const app = new Hono();
   app.use('/api/*', cors({ origin: options.webOrigin, credentials: true }));
@@ -108,6 +148,111 @@ export function createApp(storage: Storage, options: AppOptions): Hono {
     return c.json(
       table.map((standing) => ({ ...standing, team: teamRef(byId.get(standing.teamId)) })),
     );
+  });
+
+  // --- Championships (read) ---
+
+  app.get('/api/guilds/:guildId/championships', async (c) => {
+    return c.json(await championships.listChampionships(c.req.param('guildId')));
+  });
+
+  app.get('/api/guilds/:guildId/championships/:champId', async (c) => {
+    const { guildId, champId } = c.req.param();
+    try {
+      const championship = await championships.getChampionship(guildId, champId);
+      const [entrants, matchList, allTeams] = await Promise.all([
+        championships.listTeams(champId),
+        championships.listMatches(champId),
+        teams.listTeams(guildId),
+      ]);
+      const byId = new Map(allTeams.map((team) => [team.id, team]));
+      const seededTeams = entrants
+        .sort((a, b) => a.seed - b.seed)
+        .map((entrant) => ({ ...entrant, team: teamRef(byId.get(entrant.teamId)) }));
+      const bracket = await Promise.all(
+        matchList
+          .sort((a, b) => a.round - b.round || a.position - b.position)
+          .map(async (match) => ({
+            ...match,
+            sets: (await championships.getMatch(match.id)).sets,
+          })),
+      );
+      return c.json({ championship, teams: seededTeams, matches: bracket });
+    } catch (error) {
+      return fail(c, error);
+    }
+  });
+
+  // --- Teams & championships (write; requires Manage Server when OAuth is on) ---
+
+  app.post('/api/guilds/:guildId/teams', canManage, async (c) => {
+    const guildId = c.req.param('guildId');
+    const session = oauth ? sessions.get(getCookie(c, SESSION_COOKIE)) : null;
+    const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+    try {
+      const team = await teams.createTeam({
+        guildId,
+        name: String(body.name ?? ''),
+        tag: String(body.tag ?? ''),
+        captainId: session?.user.id ?? String(body.captainId ?? '0'),
+        description: body.description ? String(body.description) : undefined,
+        logoUrl: body.logoUrl ? String(body.logoUrl) : undefined,
+      });
+      return c.json(team, 201);
+    } catch (error) {
+      return fail(c, error);
+    }
+  });
+
+  app.post('/api/guilds/:guildId/championships', canManage, async (c) => {
+    const guildId = c.req.param('guildId');
+    const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+    try {
+      const championship = await championships.createChampionship(guildId, {
+        name: String(body.name ?? ''),
+        bestOf: Number(body.bestOf),
+        startsAt: parseDate(body.startsAt, 'start date'),
+        endsAt: parseDate(body.endsAt, 'end date'),
+      });
+      return c.json(championship, 201);
+    } catch (error) {
+      return fail(c, error);
+    }
+  });
+
+  app.put('/api/guilds/:guildId/championships/:champId/teams', canManage, async (c) => {
+    const { guildId, champId } = c.req.param();
+    const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+    const teamIds = Array.isArray(body.teamIds) ? body.teamIds.map((id) => String(id)) : [];
+    try {
+      return c.json(await championships.setTeams(guildId, champId, teamIds));
+    } catch (error) {
+      return fail(c, error);
+    }
+  });
+
+  app.post('/api/guilds/:guildId/championships/:champId/bracket', canManage, async (c) => {
+    const { guildId, champId } = c.req.param();
+    try {
+      return c.json(await championships.generateBracket(guildId, champId));
+    } catch (error) {
+      return fail(c, error);
+    }
+  });
+
+  app.post('/api/guilds/:guildId/matches/:matchId/sets', canManage, async (c) => {
+    const { guildId, matchId } = c.req.param();
+    const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+    const rawSets = Array.isArray(body.sets) ? body.sets : [];
+    const sets = rawSets.map((entry) => {
+      const set = entry as Record<string, unknown>;
+      return { homeScore: Number(set.homeScore), awayScore: Number(set.awayScore) };
+    });
+    try {
+      return c.json(await championships.recordSets(guildId, matchId, sets));
+    } catch (error) {
+      return fail(c, error);
+    }
   });
 
   return app;
