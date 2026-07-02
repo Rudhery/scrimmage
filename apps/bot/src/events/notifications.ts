@@ -2,13 +2,22 @@ import { time, TimestampStyles } from 'discord.js';
 import type { Scrimmage, Team } from '@scrimmage/core';
 import type { AppContext } from '../context.js';
 import { dmUser, dmUsers } from '../lib/notify.js';
-import { DEFAULT_ACCENT, ROLE_LABEL, scrimmageEmbed } from '../lib/format.js';
-import { accentFor } from '../lib/interaction.js';
+import { DEFAULT_ACCENT, scrimmageEmbed } from '../lib/format.js';
+import {
+  DEFAULT_LOCALE,
+  normalizeLocale,
+  translator,
+  type MessageKey,
+  type Translator,
+} from '../i18n/index.js';
 
 /**
  * Subscribe the bot's DM notifications to the core's domain events. This is the
  * single place that turns domain changes into Discord side effects — the
  * services themselves stay completely Discord-agnostic.
+ *
+ * Notifications are shared, guild-wide artifacts, so they use the guild's
+ * configured language.
  */
 export function registerNotifications(context: AppContext): void {
   const { events, client, logger, storage, guildSettings } = context;
@@ -22,35 +31,42 @@ export function registerNotifications(context: AppContext): void {
       storage.teams.findById(scrimmage.guildId, scrimmage.awayTeamId),
     ]);
 
-  const announceScrim = async (scrimmage: Scrimmage, headline: string): Promise<void> => {
+  const localizeGuild = async (guildId: string): Promise<{ t: Translator; accent: number }> => {
+    const settings = await guildSettings.get(guildId);
+    return {
+      t: translator(normalizeLocale(settings.language) ?? DEFAULT_LOCALE),
+      accent: settings.brandColor ?? DEFAULT_ACCENT,
+    };
+  };
+
+  const announceScrim = async (scrimmage: Scrimmage, headline: MessageKey): Promise<void> => {
     const [home, away] = await resolveScrimTeams(scrimmage);
-    const accent = await accentFor(context, scrimmage.guildId);
+    const { t, accent } = await localizeGuild(scrimmage.guildId);
     await dmUsers(
       client,
       captainsOf(home, away),
-      { content: headline, embeds: [scrimmageEmbed(scrimmage, home, away, accent)] },
+      { content: t(headline), embeds: [scrimmageEmbed(scrimmage, home, away, t, accent)] },
       logger,
     );
   };
 
   events.on('scrimmage.proposed', ({ scrimmage }) =>
-    announceScrim(scrimmage, '📣 A new scrimmage was proposed:'),
+    announceScrim(scrimmage, 'notify.scrim.proposed'),
   );
   events.on('scrimmage.confirmed', ({ scrimmage }) =>
-    announceScrim(scrimmage, '📣 A scrimmage was confirmed:'),
+    announceScrim(scrimmage, 'notify.scrim.confirmed'),
   );
   events.on('scrimmage.cancelled', ({ scrimmage }) =>
-    announceScrim(scrimmage, '📣 A scrimmage was cancelled:'),
+    announceScrim(scrimmage, 'notify.scrim.cancelled'),
   );
-  events.on('scrimmage.played', ({ scrimmage }) =>
-    announceScrim(scrimmage, '📣 A scrimmage result was recorded:'),
-  );
+  events.on('scrimmage.played', ({ scrimmage }) => announceScrim(scrimmage, 'notify.scrim.played'));
 
   events.on('scrimmage.reminderDue', async ({ scrimmage }) => {
     const [home, away] = await resolveScrimTeams(scrimmage);
     const captains = captainsOf(home, away);
     const settings = await guildSettings.get(scrimmage.guildId);
-    const embed = scrimmageEmbed(scrimmage, home, away, settings.brandColor ?? DEFAULT_ACCENT);
+    const t = translator(normalizeLocale(settings.language) ?? DEFAULT_LOCALE);
+    const embed = scrimmageEmbed(scrimmage, home, away, t, settings.brandColor ?? DEFAULT_ACCENT);
     const kickoff = time(scrimmage.scheduledAt, TimestampStyles.RelativeTime);
 
     // Announce in the configured channel, falling back to the one it was proposed in.
@@ -65,7 +81,7 @@ export function registerNotifications(context: AppContext): void {
             ...roleIds.map((id) => `<@&${id}>`),
           ].join(' ');
           await channel.send({
-            content: `${mentions} ⏰ Reminder: your scrimmage kicks off ${kickoff}!`.trim(),
+            content: `${mentions} ${t('notify.reminder.channel', { kickoff })}`.trim(),
             embeds: [embed],
             allowedMentions: { users: captains, roles: roleIds },
           });
@@ -79,23 +95,26 @@ export function registerNotifications(context: AppContext): void {
     await dmUsers(
       client,
       captains,
-      { content: `⏰ Your scrimmage kicks off ${kickoff}!`, embeds: [embed] },
+      { content: t('notify.reminder.dm', { kickoff }), embeds: [embed] },
       logger,
     );
   });
 
   events.on('team.memberAdded', async ({ team, member }) => {
-    await dmUser(client, member.userId, `✅ You were added to **${team.name}**.`, logger);
+    const { t } = await localizeGuild(team.guildId);
+    await dmUser(client, member.userId, t('notify.memberAdded', { name: team.name }), logger);
   });
   events.on('team.memberRoleChanged', async ({ team, member }) => {
+    const { t } = await localizeGuild(team.guildId);
     await dmUser(
       client,
       member.userId,
-      `🏷️ You are now **${ROLE_LABEL[member.role]}** on **${team.name}**.`,
+      t('notify.memberRole', { role: t(`role.${member.role}` as MessageKey), name: team.name }),
       logger,
     );
   });
   events.on('team.captainTransferred', async ({ team }) => {
-    await dmUser(client, team.captainId, `👑 You are now the captain of **${team.name}**.`, logger);
+    const { t } = await localizeGuild(team.guildId);
+    await dmUser(client, team.captainId, t('notify.captain', { name: team.name }), logger);
   });
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeLocale, resolveLocale, translate } from './index.js';
+import { localizations, normalizeLocale, resolveLocale, translate, translator } from './index.js';
 
 describe('i18n', () => {
   it('translates per locale with interpolation', () => {
@@ -23,5 +23,14 @@ describe('i18n', () => {
     expect(resolveLocale(null, 'es-ES')).toBe('es');
     expect(resolveLocale(null, null)).toBe('en');
     expect(resolveLocale('xx', 'yy')).toBe('en');
+  });
+
+  it('binds a translator and builds Discord command localizations', () => {
+    const t = translator('pt-BR');
+    expect(t('scrim.proposed')).toBe('📋 Amistoso proposto!');
+
+    const loc = localizations('cmd.team');
+    expect(loc['pt-BR']).toBe('Crie e gerencie times.');
+    expect(loc['es-ES']).toBe('Crea y gestiona equipos.');
   });
 });

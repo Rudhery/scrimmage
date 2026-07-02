@@ -14,18 +14,20 @@ import type { Command } from '../lib/command.js';
 import { teamEmbed, teamListEmbed, teamStatsEmbed } from '../lib/format.js';
 import { paginate, paginationRow, type PagedView } from '../lib/pagination.js';
 import {
-  accentFor,
   ensureCanManageTeam,
+  guildLocalize,
+  localize,
   requireGuildId,
   translatorFor,
 } from '../lib/interaction.js';
 import { respondTeamNames } from '../lib/autocomplete.js';
-import type { MessageKey } from '../i18n/index.js';
+import { localizations, type MessageKey, type Translator } from '../i18n/index.js';
 
 export const teamCommand: Command = {
   data: new SlashCommandBuilder()
     .setName('team')
     .setDescription('Create and manage teams.')
+    .setDescriptionLocalizations(localizations('cmd.team'))
     .addSubcommand((sub) =>
       sub
         .setName('create')
@@ -181,7 +183,9 @@ export const teamCommand: Command = {
 
     switch (interaction.options.getSubcommand()) {
       case 'create':
-        await interaction.showModal(buildCreateTeamModal());
+        await interaction.showModal(
+          buildCreateTeamModal(await translatorFor(context, interaction)),
+        );
         return;
       case 'delete':
         await deleteTeam(interaction, context, guildId);
@@ -224,15 +228,15 @@ export const teamCommand: Command = {
 const CREATE_MODAL_ID = 'team:create';
 
 /** The modal shown by `/team create`. */
-function buildCreateTeamModal(): ModalBuilder {
+function buildCreateTeamModal(t: Translator): ModalBuilder {
   return new ModalBuilder()
     .setCustomId(CREATE_MODAL_ID)
-    .setTitle('Create a team')
+    .setTitle(t('team.modal.title'))
     .addComponents(
       new ActionRowBuilder<TextInputBuilder>().addComponents(
         new TextInputBuilder()
           .setCustomId('name')
-          .setLabel('Team name')
+          .setLabel(t('team.modal.name'))
           .setStyle(TextInputStyle.Short)
           .setMinLength(2)
           .setMaxLength(50)
@@ -241,7 +245,7 @@ function buildCreateTeamModal(): ModalBuilder {
       new ActionRowBuilder<TextInputBuilder>().addComponents(
         new TextInputBuilder()
           .setCustomId('tag')
-          .setLabel('Tag (2–5 letters/numbers)')
+          .setLabel(t('team.modal.tag'))
           .setStyle(TextInputStyle.Short)
           .setMinLength(2)
           .setMaxLength(5)
@@ -250,7 +254,7 @@ function buildCreateTeamModal(): ModalBuilder {
       new ActionRowBuilder<TextInputBuilder>().addComponents(
         new TextInputBuilder()
           .setCustomId('description')
-          .setLabel('Description (optional)')
+          .setLabel(t('team.modal.description'))
           .setStyle(TextInputStyle.Paragraph)
           .setMaxLength(300)
           .setRequired(false),
@@ -258,7 +262,7 @@ function buildCreateTeamModal(): ModalBuilder {
       new ActionRowBuilder<TextInputBuilder>().addComponents(
         new TextInputBuilder()
           .setCustomId('logoUrl')
-          .setLabel('Logo / crest URL (optional)')
+          .setLabel(t('team.modal.logo'))
           .setStyle(TextInputStyle.Short)
           .setMaxLength(500)
           .setRequired(false),
@@ -276,7 +280,7 @@ export async function handleTeamModal(
   interaction: ModalSubmitInteraction,
   context: AppContext,
 ): Promise<void> {
-  const t = await translatorFor(context, interaction);
+  const { t, te, accent } = await localize(context, interaction);
   const guildId = interaction.guildId;
   if (!guildId) {
     await interaction.reply({
@@ -300,7 +304,7 @@ export async function handleTeamModal(
   const roster = await context.teams.getRoster(team.id);
   await interaction.reply({
     content: t('team.created', { name: team.name }),
-    embeds: [teamEmbed(team, roster, await accentFor(context, guildId))],
+    embeds: [teamEmbed(team, roster, te, accent)],
   });
 }
 
@@ -341,8 +345,9 @@ export async function renderTeamList(
     pageCount,
   } = paginate(await context.teams.listTeams(guildId), page);
   const row = paginationRow('page:team', current, pageCount);
+  const { t, accent } = await guildLocalize(context, guildId);
   return {
-    embeds: [teamListEmbed(items, current, pageCount, await accentFor(context, guildId))],
+    embeds: [teamListEmbed(items, current, pageCount, t, accent)],
     components: row ? [row] : [],
   };
 }
@@ -357,8 +362,9 @@ async function teamInfo(
     interaction.options.getString('team', true),
   );
   const roster = await context.teams.getRoster(team.id);
+  const { t, accent } = await guildLocalize(context, guildId);
   await interaction.reply({
-    embeds: [teamEmbed(team, roster, await accentFor(context, guildId))],
+    embeds: [teamEmbed(team, roster, t, accent)],
   });
 }
 
@@ -372,8 +378,9 @@ async function teamStats(
     interaction.options.getString('team', true),
   );
   const standing = await context.standings.forTeam(guildId, team.id);
+  const { t, accent } = await guildLocalize(context, guildId);
   await interaction.reply({
-    embeds: [teamStatsEmbed(team, standing, await accentFor(context, guildId))],
+    embeds: [teamStatsEmbed(team, standing, t, accent)],
   });
 }
 
@@ -413,10 +420,10 @@ async function transferCaptain(
   }
   const updated = await context.teams.transferCaptain(guildId, team.id, user.id);
   const roster = await context.teams.getRoster(updated.id);
-  const t = await translatorFor(context, interaction);
+  const { t, te, accent } = await localize(context, interaction);
   await interaction.reply({
     content: t('team.captainTransferred', { user: user.id, name: updated.name }),
-    embeds: [teamEmbed(updated, roster, await accentFor(context, guildId))],
+    embeds: [teamEmbed(updated, roster, te, accent)],
   });
 }
 
@@ -439,12 +446,12 @@ async function setLogo(
     url && url.length > 0 ? url : null,
   );
   const roster = await context.teams.getRoster(updated.id);
-  const t = await translatorFor(context, interaction);
+  const { t, te, accent } = await localize(context, interaction);
   await interaction.reply({
     content: updated.logoUrl
       ? t('team.logoSet', { name: updated.name })
       : t('team.logoCleared', { name: updated.name }),
-    embeds: [teamEmbed(updated, roster, await accentFor(context, guildId))],
+    embeds: [teamEmbed(updated, roster, te, accent)],
   });
 }
 
@@ -463,10 +470,10 @@ async function linkRole(
   }
   const updated = await context.teams.setTeamRole(guildId, team.id, role.id);
   const roster = await context.teams.getRoster(updated.id);
-  const t = await translatorFor(context, interaction);
+  const { t, te, accent } = await localize(context, interaction);
   await interaction.reply({
     content: t('team.roleLinked', { role: role.id, name: updated.name }),
-    embeds: [teamEmbed(updated, roster, await accentFor(context, guildId))],
+    embeds: [teamEmbed(updated, roster, te, accent)],
     allowedMentions: { parse: [] },
   });
 }

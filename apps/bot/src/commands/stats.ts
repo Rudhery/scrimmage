@@ -3,12 +3,14 @@ import type { AppContext } from '../context.js';
 import type { Command } from '../lib/command.js';
 import { mvpLine, playerStatsEmbed, statsLeaderboardEmbed } from '../lib/format.js';
 import { PAGE_SIZE, paginate, paginationRow, type PagedView } from '../lib/pagination.js';
-import { accentFor, requireGuildId } from '../lib/interaction.js';
+import { guildLocalize, requireGuildId } from '../lib/interaction.js';
+import { localizations } from '../i18n/index.js';
 
 export const statsCommand: Command = {
   data: new SlashCommandBuilder()
     .setName('stats')
     .setDescription('Player stats and the MVP leaderboard.')
+    .setDescriptionLocalizations(localizations('cmd.stats'))
     .addSubcommand((sub) => sub.setName('mvp').setDescription('Show the MVP leaderboard.'))
     .addSubcommand((sub) =>
       sub
@@ -40,8 +42,9 @@ async function player(
     context.playerStats.forPlayer(guildId, user.id),
     context.statCategories.list(guildId),
   ]);
+  const { t, accent } = await guildLocalize(context, guildId);
   await interaction.reply({
-    embeds: [playerStatsEmbed(user.id, aggregate, categories, await accentFor(context, guildId))],
+    embeds: [playerStatsEmbed(user.id, aggregate, categories, t, accent)],
   });
 }
 
@@ -60,8 +63,9 @@ export async function renderMvp(
     mvpLine(current * PAGE_SIZE + index + 1, aggregate),
   );
   const row = paginationRow('page:mvp', current, pageCount);
+  const { t, accent } = await guildLocalize(context, guildId);
   return {
-    embeds: [statsLeaderboardEmbed(lines, current, pageCount, await accentFor(context, guildId))],
+    embeds: [statsLeaderboardEmbed(lines, current, pageCount, t, accent)],
     components: row ? [row] : [],
   };
 }

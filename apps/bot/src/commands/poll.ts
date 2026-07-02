@@ -9,7 +9,8 @@ import type { AvailabilityPoll } from '@scrimmage/core';
 import type { AppContext } from '../context.js';
 import type { Command } from '../lib/command.js';
 import { pollEmbed } from '../lib/format.js';
-import { accentFor, requireGuildId } from '../lib/interaction.js';
+import { guildLocalize, requireGuildId } from '../lib/interaction.js';
+import { localizations } from '../i18n/index.js';
 import type { PagedView } from '../lib/pagination.js';
 
 const POLL_NAMESPACE = 'poll';
@@ -18,6 +19,7 @@ export const pollCommand: Command = {
   data: new SlashCommandBuilder()
     .setName('poll')
     .setDescription('Availability poll: find the time slot that works for the most players.')
+    .setDescriptionLocalizations(localizations('cmd.poll'))
     .addStringOption((opt) =>
       opt
         .setName('title')
@@ -65,11 +67,11 @@ export async function renderPoll(
   pollId: string,
 ): Promise<PagedView> {
   const poll = await context.polls.getPoll(pollId);
-  const [votes, accent] = await Promise.all([
+  const [votes, { t, accent }] = await Promise.all([
     context.polls.listVotes(pollId),
-    accentFor(context, guildId),
+    guildLocalize(context, guildId),
   ]);
-  return { embeds: [pollEmbed(poll, votes, accent)], components: pollRows(poll) };
+  return { embeds: [pollEmbed(poll, votes, t, accent)], components: pollRows(poll) };
 }
 
 /** Whether a button belongs to an availability poll. */

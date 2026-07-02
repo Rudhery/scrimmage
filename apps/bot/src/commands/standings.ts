@@ -3,12 +3,14 @@ import type { AppContext } from '../context.js';
 import type { Command } from '../lib/command.js';
 import { standingLine, standingsEmbed } from '../lib/format.js';
 import { PAGE_SIZE, paginate, paginationRow, type PagedView } from '../lib/pagination.js';
-import { accentFor, requireGuildId } from '../lib/interaction.js';
+import { guildLocalize, requireGuildId } from '../lib/interaction.js';
+import { localizations } from '../i18n/index.js';
 
 export const standingsCommand: Command = {
   data: new SlashCommandBuilder()
     .setName('standings')
-    .setDescription('Show the league standings for this server.'),
+    .setDescription('Show the league standings for this server.')
+    .setDescriptionLocalizations(localizations('cmd.standings')),
 
   async execute(interaction, context) {
     const guildId = await requireGuildId(interaction);
@@ -38,8 +40,9 @@ export async function renderStandings(
   );
 
   const row = paginationRow('page:standings', current, pageCount);
+  const { t, accent } = await guildLocalize(context, guildId);
   return {
-    embeds: [standingsEmbed(lines, current, pageCount, await accentFor(context, guildId))],
+    embeds: [standingsEmbed(lines, current, pageCount, t, accent)],
     components: row ? [row] : [],
   };
 }

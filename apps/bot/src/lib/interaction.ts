@@ -82,6 +82,21 @@ export async function accentFor(context: AppContext, guildId: string): Promise<n
 }
 
 /**
+ * Guild-scoped translator + accent for building shared artifacts (embeds shown
+ * in a channel), resolved from the guild's language only. One settings read.
+ */
+export async function guildLocalize(
+  context: AppContext,
+  guildId: string,
+): Promise<{ t: Translator; accent: number }> {
+  const settings = await context.guildSettings.get(guildId);
+  return {
+    t: translator(normalizeLocale(settings.language) ?? DEFAULT_LOCALE),
+    accent: settings.brandColor ?? DEFAULT_ACCENT,
+  };
+}
+
+/**
  * A translator for replying to this interaction, resolved from the guild's
  * language then the user's Discord locale. Use for ephemeral, one-user replies.
  */
@@ -92,6 +107,24 @@ export async function translatorFor(
   const guildId = interaction.guildId;
   const language = guildId ? (await context.guildSettings.get(guildId)).language : null;
   return translator(resolveLocale(language, interaction.locale));
+}
+
+/**
+ * One settings read yielding both translators + the accent: `t` in the user's
+ * locale (for ephemeral replies) and `te` in the guild's locale (for embeds).
+ */
+export async function localize(
+  context: AppContext,
+  interaction: ChatInputCommandInteraction | ButtonInteraction | ModalSubmitInteraction,
+): Promise<{ t: Translator; te: Translator; accent: number }> {
+  const guildId = interaction.guildId;
+  const settings = guildId ? await context.guildSettings.get(guildId) : null;
+  const language = settings?.language ?? null;
+  return {
+    t: translator(resolveLocale(language, interaction.locale)),
+    te: translator(normalizeLocale(language) ?? DEFAULT_LOCALE),
+    accent: settings?.brandColor ?? DEFAULT_ACCENT,
+  };
 }
 
 /** Whether the invoking user has the Manage Server permission. */

@@ -33,8 +33,9 @@ possible front-ends.
 - **Standings & stats** — a league table (W/D/L, goal difference, points) from recorded results.
 - **Player stats & MVP** — record per-player, per-match stats (configurable categories, volleyball
   preset) and get a weighted MVP leaderboard.
-- **Multi-language** — English, Português (BR) and Español, chosen per server (`/config language`)
-  or from each user's Discord locale.
+- **Multi-language** — English, Português (BR) and Español across replies, embeds, buttons and
+  command descriptions; ephemeral replies follow each user's locale, shared embeds follow the
+  server language (`/config language`).
 - **Customizable** — per-server points system, brand color, scrim-admin role, and reminder lead time.
 - **Server-scoped** — every team and match belongs to the guild it was created in.
 - **Pluggable storage** — the default is SQLite via Drizzle ORM; the storage layer is an interface,

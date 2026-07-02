@@ -1,12 +1,19 @@
 import { ChannelType, MessageFlags, SlashCommandBuilder } from 'discord.js';
 import type { Command } from '../lib/command.js';
 import { isServerManager, requireGuildId } from '../lib/interaction.js';
-import { LOCALE_LABELS, resolveLocale, translate, type Locale } from '../i18n/index.js';
+import {
+  localizations,
+  LOCALE_LABELS,
+  resolveLocale,
+  translate,
+  type Locale,
+} from '../i18n/index.js';
 
 export const configCommand: Command = {
   data: new SlashCommandBuilder()
     .setName('config')
     .setDescription('View and change server settings.')
+    .setDescriptionLocalizations(localizations('cmd.config'))
     .addSubcommand((sub) => sub.setName('view').setDescription('Show the current server settings.'))
     .addSubcommand((sub) =>
       sub

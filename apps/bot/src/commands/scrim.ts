@@ -20,8 +20,8 @@ import {
   scrimmageListEmbed,
 } from '../lib/format.js';
 import { paginate, paginationRow, type PagedView } from '../lib/pagination.js';
-import { accentFor, requireGuildId, translatorFor } from '../lib/interaction.js';
-import type { Translator } from '../i18n/index.js';
+import { guildLocalize, localize, requireGuildId, translatorFor } from '../lib/interaction.js';
+import { localizations, type Translator } from '../i18n/index.js';
 import {
   respondScrimmageIds,
   respondStatCategories,
@@ -32,6 +32,7 @@ export const scrimCommand: Command = {
   data: new SlashCommandBuilder()
     .setName('scrim')
     .setDescription('Propose and manage scrimmages (friendly matches).')
+    .setDescriptionLocalizations(localizations('cmd.scrim'))
     .addSubcommand((sub) =>
       sub
         .setName('propose')
@@ -230,7 +231,7 @@ async function propose(
   context: AppContext,
   guildId: string,
 ): Promise<void> {
-  const t = await translatorFor(context, interaction);
+  const { t, te, accent } = await localize(context, interaction);
   const scheduledAt = parseSchedule(interaction.options.getString('when', true));
   if (!scheduledAt) {
     await interaction.reply({
@@ -259,8 +260,8 @@ async function propose(
   });
   await interaction.reply({
     content: t('scrim.proposed'),
-    embeds: [scrimmageEmbed(scrim, home, away, await accentFor(context, guildId))],
-    components: [scrimActionRow(scrim.id, t)],
+    embeds: [scrimmageEmbed(scrim, home, away, te, accent)],
+    components: [scrimActionRow(scrim.id, te)],
   });
 }
 
@@ -274,8 +275,9 @@ async function info(
     interaction.options.getString('id', true),
   );
   const [home, away] = await resolveTeams(context, guildId, scrim.homeTeamId, scrim.awayTeamId);
+  const { t, accent } = await guildLocalize(context, guildId);
   await interaction.reply({
-    embeds: [scrimmageEmbed(scrim, home, away, await accentFor(context, guildId))],
+    embeds: [scrimmageEmbed(scrim, home, away, t, accent)],
   });
 }
 
@@ -325,10 +327,10 @@ async function result(
     },
   );
   const [home, away] = await resolveTeams(context, guildId, scrim.homeTeamId, scrim.awayTeamId);
-  const t = await translatorFor(context, interaction);
+  const { t, te, accent } = await localize(context, interaction);
   await interaction.reply({
     content: t('scrim.resultRecorded'),
-    embeds: [scrimmageEmbed(scrim, home, away, await accentFor(context, guildId))],
+    embeds: [scrimmageEmbed(scrim, home, away, te, accent)],
   });
 }
 
@@ -353,15 +355,14 @@ export async function renderScrimList(
 
   const teams = await context.teams.listTeams(guildId);
   const byId = new Map(teams.map((team) => [team.id, team]));
+  const { t, accent } = await guildLocalize(context, guildId);
   const lines = items.map((scrim) =>
-    scrimmageLine(scrim, byId.get(scrim.homeTeamId) ?? null, byId.get(scrim.awayTeamId) ?? null),
+    scrimmageLine(scrim, byId.get(scrim.homeTeamId) ?? null, byId.get(scrim.awayTeamId) ?? null, t),
   );
 
   const row = paginationRow(`page:scrim:${status ?? 'all'}`, current, pageCount);
   return {
-    embeds: [
-      scrimmageListEmbed(lines, status, current, pageCount, await accentFor(context, guildId)),
-    ],
+    embeds: [scrimmageListEmbed(lines, status, current, pageCount, t, accent)],
     components: row ? [row] : [],
   };
 }
@@ -383,9 +384,10 @@ async function applyScrimAction(
       : await context.scrimmages.cancel(guildId, scrimId);
   const [home, away] = await resolveTeams(context, guildId, scrim.homeTeamId, scrim.awayTeamId);
   const content = action === 'confirm' ? t('scrim.confirmed') : t('scrim.cancelled');
+  const { t: te, accent } = await guildLocalize(context, guildId);
   return {
     content,
-    embeds: [scrimmageEmbed(scrim, home, away, await accentFor(context, guildId))],
+    embeds: [scrimmageEmbed(scrim, home, away, te, accent)],
   };
 }
 
@@ -467,8 +469,9 @@ async function sheet(
     context.playerStats.forScrimmage(scrim.id),
     context.statCategories.list(guildId),
   ]);
+  const { t, accent } = await guildLocalize(context, guildId);
   await interaction.reply({
-    embeds: [scrimSheetEmbed(lines, categories, await accentFor(context, guildId))],
+    embeds: [scrimSheetEmbed(lines, categories, t, accent)],
   });
 }
 
@@ -489,19 +492,19 @@ async function inferTeamId(context: AppContext, scrim: Scrimmage, userId: string
 
 const RSVP_NAMESPACE = 'rsvp';
 
-function rsvpActionRow(scrimId: string): ActionRowBuilder<ButtonBuilder> {
+function rsvpActionRow(scrimId: string, t: Translator): ActionRowBuilder<ButtonBuilder> {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId(`${RSVP_NAMESPACE}:${RsvpStatus.Going}:${scrimId}`)
-      .setLabel('Going')
+      .setLabel(t('rsvp.btn.going'))
       .setStyle(ButtonStyle.Success),
     new ButtonBuilder()
       .setCustomId(`${RSVP_NAMESPACE}:${RsvpStatus.Maybe}:${scrimId}`)
-      .setLabel('Maybe')
+      .setLabel(t('rsvp.btn.maybe'))
       .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId(`${RSVP_NAMESPACE}:${RsvpStatus.Declined}:${scrimId}`)
-      .setLabel("Can't")
+      .setLabel(t('rsvp.btn.declined'))
       .setStyle(ButtonStyle.Danger),
   );
 }
@@ -514,13 +517,13 @@ export async function renderRsvp(
 ): Promise<PagedView> {
   const scrim = await context.scrimmages.getScrimmage(guildId, scrimId);
   const [home, away] = await resolveTeams(context, guildId, scrim.homeTeamId, scrim.awayTeamId);
-  const [rsvps, accent] = await Promise.all([
+  const [rsvps, { t, accent }] = await Promise.all([
     context.rsvps.forScrimmage(scrim.id),
-    accentFor(context, guildId),
+    guildLocalize(context, guildId),
   ]);
   return {
-    embeds: [rsvpEmbed(scrim, home, away, rsvps, accent)],
-    components: [rsvpActionRow(scrim.id)],
+    embeds: [rsvpEmbed(scrim, home, away, rsvps, t, accent)],
+    components: [rsvpActionRow(scrim.id, t)],
   };
 }
 
