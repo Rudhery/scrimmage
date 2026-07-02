@@ -3,7 +3,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { logout, useAuth, TEST_GUILD, type AuthUser } from '../api';
 
 const TABS = [
-  { to: '', label: 'Standings', end: true },
+  { to: '', label: 'Overview', end: true },
+  { to: 'standings', label: 'Standings', end: false },
   { to: 'teams', label: 'Teams', end: false },
   { to: 'scrimmages', label: 'Scrimmages', end: false },
   { to: 'championships', label: 'Cups', end: false },

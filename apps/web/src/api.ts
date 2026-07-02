@@ -146,6 +146,39 @@ export function useStandings(guildId: string): UseQueryResult<Standing[]> {
   });
 }
 
+// --- Overview ---
+
+export interface BotStatus {
+  online: boolean;
+  lastSeenAt: string | null;
+}
+
+export interface TeamActivity {
+  team: TeamRef | null;
+  matches: number;
+  lastMatchAt: string | null;
+}
+
+export interface GuildOverview {
+  bot: BotStatus;
+  counts: {
+    teams: number;
+    scrimmages: { total: number; proposed: number; confirmed: number; played: number };
+    championships: { total: number; active: number };
+  };
+  activeChampionships: Championship[];
+  recentScrimmages: Scrimmage[];
+  teamActivity: TeamActivity[];
+}
+
+export function useOverview(guildId: string): UseQueryResult<GuildOverview> {
+  return useQuery({
+    queryKey: ['overview', guildId],
+    queryFn: () => getJson<GuildOverview>(`/api/guilds/${encodeURIComponent(guildId)}/overview`),
+    refetchInterval: 30_000,
+  });
+}
+
 // --- Championships ---
 
 export type ChampionshipStatus = 'draft' | 'active' | 'completed';

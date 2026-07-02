@@ -8,5 +8,6 @@ export type {
   RsvpRepository,
   PollRepository,
   ChampionshipRepository,
+  BotPresenceRepository,
   Storage,
 } from './repositories.js';

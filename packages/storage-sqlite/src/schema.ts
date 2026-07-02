@@ -196,3 +196,8 @@ export const matchSets = sqliteTable(
   },
   (table) => [primaryKey({ columns: [table.matchId, table.setNumber] })],
 );
+
+export const botPresence = sqliteTable('bot_presence', {
+  guildId: text('guild_id').primaryKey(),
+  lastSeenAt: integer('last_seen_at', { mode: 'timestamp_ms' }).notNull(),
+});

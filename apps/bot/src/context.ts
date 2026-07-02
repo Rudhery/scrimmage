@@ -1,4 +1,5 @@
 import {
+  BotStatusService,
   GuildSettingsService,
   PlayerStatsService,
   PollService,
@@ -34,6 +35,7 @@ export interface AppContext {
   readonly playerStats: PlayerStatsService;
   readonly rsvps: RsvpService;
   readonly polls: PollService;
+  readonly botStatus: BotStatusService;
 }
 
 /** Wire up storage, the domain event bus and services from configuration. */
@@ -58,5 +60,6 @@ export function createContext(config: Config, logger: Logger, client: Client): A
     playerStats: new PlayerStatsService(storage.playerStats, statCategories),
     rsvps: new RsvpService(storage.rsvps),
     polls: new PollService(storage.polls),
+    botStatus: new BotStatusService(storage.botPresence),
   };
 }

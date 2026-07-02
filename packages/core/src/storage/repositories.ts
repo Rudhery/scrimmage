@@ -5,6 +5,7 @@ import type { PlayerStatLine, StatCategory } from '../domain/stats.js';
 import type { Rsvp } from '../domain/rsvp.js';
 import type { AvailabilityPoll, PollVote } from '../domain/poll.js';
 import type { Championship, ChampionshipTeam, Match, MatchSet } from '../domain/championship.js';
+import type { BotPresence } from '../domain/bot-presence.js';
 
 /**
  * Persistence boundary for teams and their rosters.
@@ -100,6 +101,13 @@ export interface ChampionshipRepository {
   listMatchSets(matchId: string): Promise<MatchSet[]>;
 }
 
+/** Persistence boundary for the bot's per-guild heartbeat. */
+export interface BotPresenceRepository {
+  /** Record that the bot is connected to each of these guilds, at `at`. */
+  heartbeat(guildIds: string[], at: Date): Promise<void>;
+  get(guildId: string): Promise<BotPresence | null>;
+}
+
 /**
  * A storage backend bundles the repositories the application needs and owns the
  * lifecycle of the underlying connection.
@@ -113,6 +121,7 @@ export interface Storage {
   readonly rsvps: RsvpRepository;
   readonly polls: PollRepository;
   readonly championships: ChampionshipRepository;
+  readonly botPresence: BotPresenceRepository;
   /** Release any underlying resources (connections, file handles, …). */
   close(): Promise<void> | void;
 }

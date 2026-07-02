@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { getCookie } from 'hono/cookie';
 import {
+  BotStatusService,
   ChampionshipService,
   GuildSettingsService,
   ScrimmageService,
@@ -78,6 +79,7 @@ export function createApp(storage: Storage, options: AppOptions): Hono {
     new GuildSettingsService(storage.guildSettings),
   );
   const championships = new ChampionshipService(storage.championships);
+  const botStatus = new BotStatusService(storage.botPresence);
 
   const oauth = options.oauth ?? null;
   const sessions = options.sessions ?? new SessionStore();
@@ -148,6 +150,61 @@ export function createApp(storage: Storage, options: AppOptions): Hono {
     return c.json(
       table.map((standing) => ({ ...standing, team: teamRef(byId.get(standing.teamId)) })),
     );
+  });
+
+  // --- Overview (server panorama) ---
+
+  app.get('/api/guilds/:guildId/overview', async (c) => {
+    const guildId = c.req.param('guildId');
+    const [bot, allTeams, allScrims, allChamps] = await Promise.all([
+      botStatus.statusFor(guildId),
+      teams.listTeams(guildId),
+      scrimmages.list(guildId),
+      championships.listChampionships(guildId),
+    ]);
+    const byId = new Map(allTeams.map((team) => [team.id, team]));
+    const withRefs = (scrimmage: (typeof allScrims)[number]) => ({
+      ...scrimmage,
+      homeTeam: teamRef(byId.get(scrimmage.homeTeamId)),
+      awayTeam: teamRef(byId.get(scrimmage.awayTeamId)),
+    });
+
+    const recentScrimmages = [...allScrims]
+      .sort((a, b) => b.scheduledAt.getTime() - a.scheduledAt.getTime())
+      .slice(0, 5)
+      .map(withRefs);
+
+    const teamActivity = allTeams
+      .map((team) => {
+        const involved = allScrims.filter(
+          (s) => s.homeTeamId === team.id || s.awayTeamId === team.id,
+        );
+        const lastMatchAt = involved.reduce<Date | null>((latest, s) => {
+          return !latest || s.scheduledAt.getTime() > latest.getTime() ? s.scheduledAt : latest;
+        }, null);
+        return { team: teamRef(team), matches: involved.length, lastMatchAt };
+      })
+      .sort((a, b) => b.matches - a.matches);
+
+    return c.json({
+      bot,
+      counts: {
+        teams: allTeams.length,
+        scrimmages: {
+          total: allScrims.length,
+          proposed: allScrims.filter((s) => s.status === 'proposed').length,
+          confirmed: allScrims.filter((s) => s.status === 'confirmed').length,
+          played: allScrims.filter((s) => s.status === 'played').length,
+        },
+        championships: {
+          total: allChamps.length,
+          active: allChamps.filter((ch) => ch.status === 'active').length,
+        },
+      },
+      activeChampionships: allChamps.filter((ch) => ch.status === 'active'),
+      recentScrimmages,
+      teamActivity,
+    });
   });
 
   // --- Championships (read) ---
