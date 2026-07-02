@@ -1,8 +1,21 @@
-import { MessageFlags, PermissionFlagsBits, type ChatInputCommandInteraction } from 'discord.js';
+import {
+  MessageFlags,
+  PermissionFlagsBits,
+  type ButtonInteraction,
+  type ChatInputCommandInteraction,
+  type ModalSubmitInteraction,
+} from 'discord.js';
 import type { Team } from '@scrimmage/core';
 import type { AppContext } from '../context.js';
 import { DEFAULT_ACCENT } from './format.js';
-import { DEFAULT_LOCALE, normalizeLocale, translate } from '../i18n/index.js';
+import {
+  DEFAULT_LOCALE,
+  normalizeLocale,
+  resolveLocale,
+  translate,
+  translator,
+  type Translator,
+} from '../i18n/index.js';
 
 /**
  * Ensure the command was used inside a guild. Replies with an ephemeral notice
@@ -43,9 +56,42 @@ export async function canManageTeam(
   return adminRoleId !== null && memberHasRole(interaction, adminRoleId);
 }
 
+/**
+ * Guard for team-management actions: replies with a localized permission error
+ * and returns `false` when the user may not manage the team.
+ */
+export async function ensureCanManageTeam(
+  context: AppContext,
+  interaction: ChatInputCommandInteraction,
+  team: Team,
+): Promise<boolean> {
+  if (await canManageTeam(context, interaction, team)) {
+    return true;
+  }
+  const t = await translatorFor(context, interaction);
+  await interaction.reply({
+    content: t('error.permissionDenied'),
+    flags: MessageFlags.Ephemeral,
+  });
+  return false;
+}
+
 /** The guild's embed accent color, or the bot default. */
 export async function accentFor(context: AppContext, guildId: string): Promise<number> {
   return (await context.guildSettings.get(guildId)).brandColor ?? DEFAULT_ACCENT;
+}
+
+/**
+ * A translator for replying to this interaction, resolved from the guild's
+ * language then the user's Discord locale. Use for ephemeral, one-user replies.
+ */
+export async function translatorFor(
+  context: AppContext,
+  interaction: ChatInputCommandInteraction | ButtonInteraction | ModalSubmitInteraction,
+): Promise<Translator> {
+  const guildId = interaction.guildId;
+  const language = guildId ? (await context.guildSettings.get(guildId)).language : null;
+  return translator(resolveLocale(language, interaction.locale));
 }
 
 /** Whether the invoking user has the Manage Server permission. */

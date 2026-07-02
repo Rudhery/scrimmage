@@ -1,7 +1,11 @@
 import { ScrimmageError, ValidationError } from '@scrimmage/core';
+import { DEFAULT_LOCALE, translate, type Locale } from '../i18n/index.js';
 
-/** Convert any thrown value into a friendly, user-facing message. */
-export function toUserMessage(error: unknown): string {
+/**
+ * Convert any thrown value into a friendly, user-facing message. Domain errors
+ * carry their own (English) message; the generic fallback is localized.
+ */
+export function toUserMessage(error: unknown, locale: Locale = DEFAULT_LOCALE): string {
   if (error instanceof ValidationError) {
     const details = error.issues
       ? Object.values(error.issues)
@@ -16,5 +20,5 @@ export function toUserMessage(error: unknown): string {
     return `❌ ${error.message}`;
   }
 
-  return '❌ Something went wrong. Please try again later.';
+  return translate(locale, 'error.generic');
 }

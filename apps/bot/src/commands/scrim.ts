@@ -20,7 +20,8 @@ import {
   scrimmageListEmbed,
 } from '../lib/format.js';
 import { paginate, paginationRow, type PagedView } from '../lib/pagination.js';
-import { accentFor, requireGuildId } from '../lib/interaction.js';
+import { accentFor, requireGuildId, translatorFor } from '../lib/interaction.js';
+import type { Translator } from '../i18n/index.js';
 import {
   respondScrimmageIds,
   respondStatCategories,
@@ -229,11 +230,11 @@ async function propose(
   context: AppContext,
   guildId: string,
 ): Promise<void> {
+  const t = await translatorFor(context, interaction);
   const scheduledAt = parseSchedule(interaction.options.getString('when', true));
   if (!scheduledAt) {
     await interaction.reply({
-      content:
-        '❌ I could not understand that time. Use ISO 8601 (e.g. `2026-07-15T20:00`) or a Unix timestamp.',
+      content: t('scrim.badTime'),
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -257,9 +258,9 @@ async function propose(
     channelId: interaction.channelId ?? undefined,
   });
   await interaction.reply({
-    content: '📋 Scrimmage proposed!',
+    content: t('scrim.proposed'),
     embeds: [scrimmageEmbed(scrim, home, away, await accentFor(context, guildId))],
-    components: [scrimActionRow(scrim.id)],
+    components: [scrimActionRow(scrim.id, t)],
   });
 }
 
@@ -283,11 +284,13 @@ async function confirm(
   context: AppContext,
   guildId: string,
 ): Promise<void> {
+  const t = await translatorFor(context, interaction);
   const reply = await applyScrimAction(
     context,
     guildId,
     interaction.options.getString('id', true),
     'confirm',
+    t,
   );
   await interaction.reply(reply);
 }
@@ -297,11 +300,13 @@ async function cancel(
   context: AppContext,
   guildId: string,
 ): Promise<void> {
+  const t = await translatorFor(context, interaction);
   const reply = await applyScrimAction(
     context,
     guildId,
     interaction.options.getString('id', true),
     'cancel',
+    t,
   );
   await interaction.reply(reply);
 }
@@ -320,8 +325,9 @@ async function result(
     },
   );
   const [home, away] = await resolveTeams(context, guildId, scrim.homeTeamId, scrim.awayTeamId);
+  const t = await translatorFor(context, interaction);
   await interaction.reply({
-    content: '🏁 Result recorded!',
+    content: t('scrim.resultRecorded'),
     embeds: [scrimmageEmbed(scrim, home, away, await accentFor(context, guildId))],
   });
 }
@@ -369,13 +375,14 @@ async function applyScrimAction(
   guildId: string,
   scrimId: string,
   action: ScrimAction,
+  t: Translator,
 ): Promise<ScrimReply> {
   const scrim =
     action === 'confirm'
       ? await context.scrimmages.confirm(guildId, scrimId)
       : await context.scrimmages.cancel(guildId, scrimId);
   const [home, away] = await resolveTeams(context, guildId, scrim.homeTeamId, scrim.awayTeamId);
-  const content = action === 'confirm' ? '🟢 Scrimmage confirmed!' : '🔴 Scrimmage cancelled.';
+  const content = action === 'confirm' ? t('scrim.confirmed') : t('scrim.cancelled');
   return {
     content,
     embeds: [scrimmageEmbed(scrim, home, away, await accentFor(context, guildId))],
@@ -385,15 +392,15 @@ async function applyScrimAction(
 const BUTTON_NAMESPACE = 'scrim';
 
 /** The Confirm/Cancel action row shown under a freshly proposed scrimmage. */
-function scrimActionRow(scrimId: string): ActionRowBuilder<ButtonBuilder> {
+function scrimActionRow(scrimId: string, t: Translator): ActionRowBuilder<ButtonBuilder> {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId(`${BUTTON_NAMESPACE}:confirm:${scrimId}`)
-      .setLabel('Confirm')
+      .setLabel(t('scrim.btn.confirm'))
       .setStyle(ButtonStyle.Success),
     new ButtonBuilder()
       .setCustomId(`${BUTTON_NAMESPACE}:cancel:${scrimId}`)
-      .setLabel('Cancel')
+      .setLabel(t('scrim.btn.cancel'))
       .setStyle(ButtonStyle.Danger),
   );
 }
@@ -416,7 +423,8 @@ export async function handleScrimButton(
   if ((action !== 'confirm' && action !== 'cancel') || !scrimId) {
     return;
   }
-  const reply = await applyScrimAction(context, guildId, scrimId, action);
+  const t = await translatorFor(context, interaction);
+  const reply = await applyScrimAction(context, guildId, scrimId, action, t);
   await interaction.update({ ...reply, components: [] });
 }
 
@@ -442,7 +450,8 @@ async function recordStat(
     key: category,
     value,
   });
-  await interaction.reply(`📊 Recorded **${value}** ${category} for <@${user.id}>.`);
+  const t = await translatorFor(context, interaction);
+  await interaction.reply(t('scrim.statRecorded', { value, category, user: user.id }));
 }
 
 async function sheet(

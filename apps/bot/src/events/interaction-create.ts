@@ -3,6 +3,7 @@ import type { Collection } from 'discord.js';
 import type { AppContext } from '../context.js';
 import type { Command } from '../lib/command.js';
 import { toUserMessage } from '../lib/errors.js';
+import { DEFAULT_LOCALE, normalizeLocale } from '../i18n/index.js';
 import {
   handleRsvpButton,
   handleScrimButton,
@@ -45,7 +46,7 @@ export async function handleInteraction(
       }
     } catch (error) {
       context.logger.error({ err: error, customId: interaction.customId }, 'button failed');
-      const content = toUserMessage(error);
+      const content = toUserMessage(error, normalizeLocale(interaction.locale) ?? DEFAULT_LOCALE);
       if (interaction.replied || interaction.deferred) {
         await interaction.followUp({ content, flags: MessageFlags.Ephemeral });
       } else {
@@ -63,7 +64,7 @@ export async function handleInteraction(
       await handleTeamModal(interaction, context);
     } catch (error) {
       context.logger.error({ err: error, customId: interaction.customId }, 'modal failed');
-      const content = toUserMessage(error);
+      const content = toUserMessage(error, normalizeLocale(interaction.locale) ?? DEFAULT_LOCALE);
       if (interaction.replied || interaction.deferred) {
         await interaction.followUp({ content, flags: MessageFlags.Ephemeral });
       } else {

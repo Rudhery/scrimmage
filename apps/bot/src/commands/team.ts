@@ -11,12 +11,16 @@ import {
 import { TeamRole } from '@scrimmage/core';
 import type { AppContext } from '../context.js';
 import type { Command } from '../lib/command.js';
-import { ROLE_LABEL, teamEmbed, teamListEmbed, teamStatsEmbed } from '../lib/format.js';
+import { teamEmbed, teamListEmbed, teamStatsEmbed } from '../lib/format.js';
 import { paginate, paginationRow, type PagedView } from '../lib/pagination.js';
-import { accentFor, canManageTeam, requireGuildId } from '../lib/interaction.js';
+import {
+  accentFor,
+  ensureCanManageTeam,
+  requireGuildId,
+  translatorFor,
+} from '../lib/interaction.js';
 import { respondTeamNames } from '../lib/autocomplete.js';
-
-const PERMISSION_DENIED = '❌ Only the team captain or a server manager can do that.';
+import type { MessageKey } from '../i18n/index.js';
 
 export const teamCommand: Command = {
   data: new SlashCommandBuilder()
@@ -272,10 +276,11 @@ export async function handleTeamModal(
   interaction: ModalSubmitInteraction,
   context: AppContext,
 ): Promise<void> {
+  const t = await translatorFor(context, interaction);
   const guildId = interaction.guildId;
   if (!guildId) {
     await interaction.reply({
-      content: 'This command can only be used in a server.',
+      content: t('error.guildOnly'),
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -294,7 +299,7 @@ export async function handleTeamModal(
 
   const roster = await context.teams.getRoster(team.id);
   await interaction.reply({
-    content: `✅ Created **${team.name}**.`,
+    content: t('team.created', { name: team.name }),
     embeds: [teamEmbed(team, roster, await accentFor(context, guildId))],
   });
 }
@@ -308,12 +313,12 @@ async function deleteTeam(
     guildId,
     interaction.options.getString('team', true),
   );
-  if (!(await canManageTeam(context, interaction, team))) {
-    await interaction.reply({ content: PERMISSION_DENIED, flags: MessageFlags.Ephemeral });
+  if (!(await ensureCanManageTeam(context, interaction, team))) {
     return;
   }
   await context.teams.deleteTeam(guildId, team.id);
-  await interaction.reply(`🗑️ Deleted **${team.name}**.`);
+  const t = await translatorFor(context, interaction);
+  await interaction.reply(t('team.deleted', { name: team.name }));
 }
 
 async function listTeams(
@@ -381,8 +386,7 @@ async function renameTeam(
     guildId,
     interaction.options.getString('team', true),
   );
-  if (!(await canManageTeam(context, interaction, team))) {
-    await interaction.reply({ content: PERMISSION_DENIED, flags: MessageFlags.Ephemeral });
+  if (!(await ensureCanManageTeam(context, interaction, team))) {
     return;
   }
   const renamed = await context.teams.renameTeam(
@@ -390,7 +394,8 @@ async function renameTeam(
     team.id,
     interaction.options.getString('name', true),
   );
-  await interaction.reply(`✏️ Renamed **${team.name}** to **${renamed.name}**.`);
+  const t = await translatorFor(context, interaction);
+  await interaction.reply(t('team.renamed', { old: team.name, name: renamed.name }));
 }
 
 async function transferCaptain(
@@ -403,14 +408,14 @@ async function transferCaptain(
     guildId,
     interaction.options.getString('team', true),
   );
-  if (!(await canManageTeam(context, interaction, team))) {
-    await interaction.reply({ content: PERMISSION_DENIED, flags: MessageFlags.Ephemeral });
+  if (!(await ensureCanManageTeam(context, interaction, team))) {
     return;
   }
   const updated = await context.teams.transferCaptain(guildId, team.id, user.id);
   const roster = await context.teams.getRoster(updated.id);
+  const t = await translatorFor(context, interaction);
   await interaction.reply({
-    content: `👑 <@${user.id}> is now the captain of **${updated.name}**.`,
+    content: t('team.captainTransferred', { user: user.id, name: updated.name }),
     embeds: [teamEmbed(updated, roster, await accentFor(context, guildId))],
   });
 }
@@ -425,8 +430,7 @@ async function setLogo(
     guildId,
     interaction.options.getString('team', true),
   );
-  if (!(await canManageTeam(context, interaction, team))) {
-    await interaction.reply({ content: PERMISSION_DENIED, flags: MessageFlags.Ephemeral });
+  if (!(await ensureCanManageTeam(context, interaction, team))) {
     return;
   }
   const updated = await context.teams.setTeamLogo(
@@ -435,10 +439,11 @@ async function setLogo(
     url && url.length > 0 ? url : null,
   );
   const roster = await context.teams.getRoster(updated.id);
+  const t = await translatorFor(context, interaction);
   await interaction.reply({
     content: updated.logoUrl
-      ? `🛡️ Updated the crest for **${updated.name}**.`
-      : `🛡️ Cleared the crest for **${updated.name}**.`,
+      ? t('team.logoSet', { name: updated.name })
+      : t('team.logoCleared', { name: updated.name }),
     embeds: [teamEmbed(updated, roster, await accentFor(context, guildId))],
   });
 }
@@ -453,14 +458,14 @@ async function linkRole(
     guildId,
     interaction.options.getString('team', true),
   );
-  if (!(await canManageTeam(context, interaction, team))) {
-    await interaction.reply({ content: PERMISSION_DENIED, flags: MessageFlags.Ephemeral });
+  if (!(await ensureCanManageTeam(context, interaction, team))) {
     return;
   }
   const updated = await context.teams.setTeamRole(guildId, team.id, role.id);
   const roster = await context.teams.getRoster(updated.id);
+  const t = await translatorFor(context, interaction);
   await interaction.reply({
-    content: `🎽 Linked <@&${role.id}> to **${updated.name}**.`,
+    content: t('team.roleLinked', { role: role.id, name: updated.name }),
     embeds: [teamEmbed(updated, roster, await accentFor(context, guildId))],
     allowedMentions: { parse: [] },
   });
@@ -475,12 +480,12 @@ async function unlinkRole(
     guildId,
     interaction.options.getString('team', true),
   );
-  if (!(await canManageTeam(context, interaction, team))) {
-    await interaction.reply({ content: PERMISSION_DENIED, flags: MessageFlags.Ephemeral });
+  if (!(await ensureCanManageTeam(context, interaction, team))) {
     return;
   }
   await context.teams.setTeamRole(guildId, team.id, null);
-  await interaction.reply(`🎽 Unlinked the role from **${team.name}**.`);
+  const t = await translatorFor(context, interaction);
+  await interaction.reply(t('team.roleUnlinked', { name: team.name }));
 }
 
 async function setRole(
@@ -494,12 +499,18 @@ async function setRole(
     guildId,
     interaction.options.getString('team', true),
   );
-  if (!(await canManageTeam(context, interaction, team))) {
-    await interaction.reply({ content: PERMISSION_DENIED, flags: MessageFlags.Ephemeral });
+  if (!(await ensureCanManageTeam(context, interaction, team))) {
     return;
   }
   await context.teams.setMemberRole(guildId, team.id, user.id, role);
-  await interaction.reply(`🏷️ <@${user.id}> is now **${ROLE_LABEL[role]}** on **${team.name}**.`);
+  const t = await translatorFor(context, interaction);
+  await interaction.reply(
+    t('team.memberRole', {
+      user: user.id,
+      role: t(`role.${role}` as MessageKey),
+      name: team.name,
+    }),
+  );
 }
 
 async function addMember(
@@ -512,12 +523,12 @@ async function addMember(
     guildId,
     interaction.options.getString('team', true),
   );
-  if (!(await canManageTeam(context, interaction, team))) {
-    await interaction.reply({ content: PERMISSION_DENIED, flags: MessageFlags.Ephemeral });
+  if (!(await ensureCanManageTeam(context, interaction, team))) {
     return;
   }
   await context.teams.addMember(guildId, team.id, user.id);
-  await interaction.reply(`✅ Added <@${user.id}> to **${team.name}**.`);
+  const t = await translatorFor(context, interaction);
+  await interaction.reply(t('team.memberAdded', { user: user.id, name: team.name }));
 }
 
 async function removeMember(
@@ -530,10 +541,10 @@ async function removeMember(
     guildId,
     interaction.options.getString('team', true),
   );
-  if (!(await canManageTeam(context, interaction, team))) {
-    await interaction.reply({ content: PERMISSION_DENIED, flags: MessageFlags.Ephemeral });
+  if (!(await ensureCanManageTeam(context, interaction, team))) {
     return;
   }
   await context.teams.removeMember(guildId, team.id, user.id);
-  await interaction.reply(`👋 Removed <@${user.id}> from **${team.name}**.`);
+  const t = await translatorFor(context, interaction);
+  await interaction.reply(t('team.memberRemoved', { user: user.id, name: team.name }));
 }
